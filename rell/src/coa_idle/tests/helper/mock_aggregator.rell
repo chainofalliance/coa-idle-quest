@@ -1,0 +1,11 @@
+function aggregate_definitions(
+    mocks: list<(auth_data) -> unit> = []
+) {
+    val account_admin = register_admin();
+    
+    for(mock in mocks) {
+        mock(account_admin);
+    }
+
+    return account_admin;
+}

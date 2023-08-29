@@ -1,0 +1,15 @@
+.env
+.secret*
+.vscode/
+postchain.pid
+logs/
+rell/logs/
+rell/postchain-node/
+rell/target
+rell/rell_test_grep.xml
+data
+build
+keypairs/kp_*
+
+# Node
+node_modules/

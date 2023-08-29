@@ -1,0 +1,11 @@
+blockchains:
+ coa_idle:
+    module: ${MAIN_MODULE}
+    moduleArgs: &args
+      lib.ft4.accounts:
+        rate_limit_active: 0
+        rate_limit_max_points: 12
+        rate_limit_recovery_time: 5000
+        rate_limit_points_at_account_creation: 1
+      lib.ft4.admin:
+        admin_pubkey: ${ADMIN_PUBKEY}

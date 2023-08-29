@@ -1,0 +1,6 @@
+@test module;
+
+import main_dev.*;
+
+import lib.ft4.admin.{register_account, register_asset};
+import lib.ft4.accounts.{auth_descriptor, auth_type};

@@ -1,0 +1,6 @@
+  testnet:
+    brid: x"8C5AB44B61934386D00A446D264810E19B3B8C0E28DF6CFF54966E7814BDCD11"
+    url: https://testnet2.chromia.dev:7740
+    container: ${CONTAINER_ID_TESTNET}
+    chains:
+      ChainOfAlliance: x"${BRID_TESTNET}"
