@@ -1,0 +1,45 @@
+namespace HeroShop {
+    val SELECTION_PER_PLAYER = 3;
+    val REFRESH_COST = 50;
+
+    function PRICE_MAP() = map<Hero.e_rarity, integer>([
+        Hero.e_rarity.common: 100,
+        Hero.e_rarity.uncommon: 150,
+        Hero.e_rarity.rare: 200,
+        Hero.e_rarity.magical: 250,
+        Hero.e_rarity.legendary: 500
+    ]);
+
+    entity __def {
+        player: Player.__def;
+        index hero_id: byte_array;
+        hero: byte_array;
+        price: integer;
+    }
+
+    function get(player: Player.__def) {
+        return __def @* {player} (
+            hero = struct<Hero.__def>.from_bytes(.hero),
+            price = .price
+        );
+    }
+
+    function buy(player: Player.__def, id: byte_array) {
+        var (hero, price) = __def @ {player, .hero_id == id} (struct<Hero.__def>.from_bytes(.hero), .price);
+        Player.deduct(player, price);
+        Hero.construct(player, hero);
+    }
+
+    function refresh(player: Player.__def) {
+        val is_starting = PlayerHero.get_heroes(player).size() < 3;
+        if (not is_starting)
+            Player.deduct(player, REFRESH_COST);
+
+        delete __def @* {player};
+        for (i in range(SELECTION_PER_PLAYER)) {
+            val hero = if (is_starting) Hero.get_with_rarity(Hero.e_rarity.common) else Hero.get_random();
+            val price = if (is_starting) 0 else PRICE_MAP()[hero.blessing.e_rarity];
+            create __def (player, hero_id=hero.id, hero=hero.to_bytes(), price);
+        }
+    }
+}

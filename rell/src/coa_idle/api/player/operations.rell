@@ -1,0 +1,11 @@
+namespace IPlayer {
+    operation register(
+        ft4.acc.auth_descriptor
+    ) {
+        val account_id = ft4.acc.create_account_with_auth(auth_descriptor);
+        val account = account @ {account_id};
+
+        val player = Player.construct(account);
+        HeroShop.refresh(player);
+    }
+}

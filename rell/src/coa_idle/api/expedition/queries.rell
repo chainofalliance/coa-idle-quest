@@ -1,0 +1,8 @@
+namespace IExpedition {
+    query get_active(
+        account_id: byte_array
+    ) {
+        val player = Player.get_by_account_id(account_id);
+        return Expedition.get_all(player);
+    }
+}

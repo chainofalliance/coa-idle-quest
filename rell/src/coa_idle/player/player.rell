@@ -1,0 +1,50 @@
+namespace Player {
+    val AUTOGEN_MAX_RETRIES: integer = 10;
+
+    entity __def {
+        key account: ft4.acc.account;
+        mutable shards: integer = 75;
+    }
+
+    function construct(account: ft4.acc.account): __def {
+        return create __def(account);
+    }
+
+    function get_by_account(account: ft4.acc.account) {
+        return __def @ {account};
+    }
+
+    function get_by_account_id(account_id: byte_array) {
+        return __def @ {.account.id == account_id};
+    }
+
+    function does_exist(account_id: byte_array): boolean {
+        return __def @? {.account.id == account_id} != null;
+    }
+
+    function get_login_data(player: __def, timestamp) {
+        return (
+            null
+        );
+    }    
+
+    function deduct(player: Player.__def, shards: integer) {
+        require(player.shards >= shards);
+        player.shards -= shards;
+    }
+}
+
+namespace PlayerHero {
+    entity __def {
+        key hero: Hero.__def;
+        player: Player.__def;
+    }
+
+    function get_owner(hero: Hero.__def) {
+        return __def @ {hero}.player;
+    }
+
+    function get_heroes(player: Player.__def) {
+        return __def @* {player}.hero;
+    }
+}

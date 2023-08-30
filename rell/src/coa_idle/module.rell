@@ -1,5 +1,14 @@
 module;
 
+import .api.*;
+
+import .expedition.*;
+import .hero.*;
+import .player.*;
+import .random.*;
+import .shop.*;
+
+import lib.time.*;
 
 import lib.ft4.ft4_basic_dev.*;
 import lib.ft4.assets.{asset, balance};

@@ -1,0 +1,96 @@
+namespace Expedition {
+    entity __def {
+        id: byte_array;
+        player: Player.__def;
+        created_at: timestamp = now();
+        mutable returned: boolean = false;
+    }
+
+    function construct(player: Player.__def, heroes: list<Hero.__def>) {
+        var owners = heroes @* {} (@group PlayerHero.get_owner($));
+        var owner = owners[0];
+        require(owners.size() == 1);
+        require(owner == player);
+
+        val expedition = create __def(Random.next(), player);
+        ExpeditionParty.construct(expedition, heroes);
+
+        Challenge.next(expedition);
+    }
+
+    function get(id: byte_array) {
+        return __def @ {id};
+    }
+
+    function get_all(player: Player.__def) {
+        return __def @* {player, .returned == false} (
+            id = .id,
+            created_at = .created_at,
+            retreat_at = Challenge.get_cancel($)?.arrival_at,
+            next_challenge = Challenge.get_definition($)
+        );
+    }
+
+    function advance(expedition: Expedition.__def, action_id: integer, timestamp = now()) {
+        require(not expedition.returned);
+
+        var challenge = Challenge.get_latest(expedition);
+        require(challenge.arrival_at <= timestamp);
+
+        Challenge.resolve(challenge, action_id);
+    }
+
+    function retreat(expedition: Expedition.__def) {
+        Challenge.retreat(expedition);
+    }
+
+    function finish(expedition: Expedition.__def, timestamp = now()) {
+        var retreat = Challenge.cancel @ {expedition};
+        require(retreat.arrival_at <= timestamp);
+
+        expedition.returned = true;
+        ExpeditionLoot.claim(expedition);
+    }
+}
+
+namespace ExpeditionParty {
+    entity __def {
+        expedition: Expedition.__def;
+        hero: Hero.__def;
+        mutable health: integer;
+
+        key expedition, hero;
+    }
+
+    function construct(expedition: Expedition.__def, heroes: list<Hero.__def>) {
+        for (hero in heroes)
+            create ExpeditionParty.__def(expedition, hero, Hero.get_health(hero));
+    }
+
+    function get(expedition: Expedition.__def) {
+        return __def @* {expedition} (
+            hero = .hero,
+            health = .health
+        );
+    }
+}
+
+namespace ExpeditionLoot {
+    entity __def {
+        expedition: Expedition.__def;
+        e_type;
+        amount: integer;
+        mutable claimed: boolean = false;
+    }
+
+    enum e_type {
+        shards,
+        hero,
+        backpack,
+        consumable
+    }
+
+    function claim(expedition: Expedition.__def) {
+        
+    }
+}

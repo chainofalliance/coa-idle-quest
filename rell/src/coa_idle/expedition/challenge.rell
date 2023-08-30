@@ -1,0 +1,175 @@
+struct module_args {
+    travel_time: integer;
+}
+
+val TRAVEL_TIME = chain_context.args.travel_time;
+
+namespace Challenge {
+    enum e_type {
+        fight,
+        check,
+        fountain,
+        boss
+    }
+
+    enum e_region {
+        desert,
+        forest,
+        volcano,
+        town,
+        max
+    }
+
+    enum e_difficulty {
+        easy,
+        medium,
+        hard
+    }
+
+    entity __def {
+        expedition: Expedition.__def;
+        e_region;
+        arrival_at: timestamp;
+        mutable resolved: boolean = false;
+    }
+
+    entity cancel {
+        expedition: Expedition.__def;
+        arrival_at: timestamp;
+    }
+
+    entity action {
+        id: integer;
+        challenge: __def;
+        e_type;
+        e_difficulty;
+        next_region: e_region;
+    }
+
+    function get_latest(expedition: Expedition.__def) {
+        return __def @ {expedition, .resolved == false};
+    }
+
+    function get_cancel(expedition: Expedition.__def) {
+        return cancel @? {expedition};
+    }
+
+    function get_definition(expedition: Expedition.__def) {
+        var challenge = __def @? {expedition, .resolved == false};
+        if (challenge == null)
+            return null;
+
+        return (
+            region = challenge.e_region,
+            arrival_at = challenge.arrival_at,
+            actions = action @* {challenge} (
+                id = .id,
+                type = .e_type,
+                next_region = .next_region
+            )
+        );
+    }
+
+    function resolve(challenge: __def, action_id: integer) {
+        var party = ExpeditionParty.get(challenge.expedition);
+
+        // TODO resolve action
+
+        challenge.resolved = true;
+        
+        var is_dead = false;
+        for (member in party)
+            is_dead = is_dead or member.health > 0;
+
+        if (is_dead)
+            retreat(challenge.expedition);
+        else
+            next(challenge.expedition);
+    }
+
+    function retreat(expedition: Expedition.__def) {
+        update __def @* {expedition} (.resolved = true);
+        create cancel (expedition, now() + TRAVEL_TIME);
+    }
+
+    function CHALLENGE_CHANCE() = map<e_type, integer>([
+        e_type.fight: 100,
+        e_type.check: 100,
+        e_type.fountain: 50,
+        e_type.boss: 10
+    ]);
+    
+    function ACTION_CHANCE() = list<integer>([
+        100,
+        50,
+        5
+    ]);
+
+    val REGION_CHANGE_CHANCE = 20;
+
+    function next(expedition: Expedition.__def, previos_region: e_region? = null) {
+        var amount_rnd = Random.next_integer(100)+1;
+        var action_amount = ACTION_CHANCE() @ {$ >= amount_rnd} (@sum 1);
+
+        var challenge_count = __def @ {expedition} (@sum 1);
+        var challenge = create __def (e_region.town, expedition, now() + TRAVEL_TIME);
+
+        for (i in range(action_amount)) {
+            var type = random_type(challenge_count);
+            var region = if (previos_region == null or Random.next_integer(100) < REGION_CHANGE_CHANCE) random_region() else previos_region;
+            var difficulty = random_difficulty(type, challenge_count);
+            create action (i, challenge, type, region, difficulty);
+        }
+    }
+
+    function random_type(challenge_count: integer) {
+        var chances = CHALLENGE_CHANCE();
+        chances[e_type.boss] += 10 * challenge_count % 10;
+
+        var chances_max = chances @ {} (@sum $[1]);
+        
+        var rnd = Random.next_integer(chances_max)+1;
+        var idx = 0;
+        while (true) {
+            rnd -= chances[e_type.value(idx)];
+            if (rnd <= 0)
+                break;
+            else
+                idx++;
+        }
+
+        return e_type.value(idx);
+    }
+
+    function random_region() {
+        return e_region.value(Random.next_integer(e_region.max.value));
+    }
+
+    
+    function DIFFICULTY_CHANCE() = list<integer>([
+        100,
+        10,
+        0
+    ]);
+
+    function random_difficulty(type: e_type, challenge_count: integer) {
+        var chances = DIFFICULTY_CHANCE();
+        chances[0] -= max(30, 2 * challenge_count);
+        chances[1] += min(100, 2 * challenge_count);
+        chances[2] += min(50, 3 * challenge_count);
+
+        var chances_max = chances @ {} (@sum $);
+        
+        var rnd = Random.next_integer(chances_max)+1;
+        var idx = 0;
+        while (true) {
+            rnd -= chances[idx];
+            if (rnd <= 0)
+                break;
+            else
+                idx++;
+        }
+
+        return e_difficulty.value(idx);
+    }
+}

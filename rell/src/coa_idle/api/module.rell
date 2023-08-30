@@ -1,0 +1,7 @@
+module;
+
+import ^.*;
+
+import .expedition.*;
+import .player.*;
+import .shop.*;

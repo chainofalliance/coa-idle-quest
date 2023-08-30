@@ -1,0 +1,16 @@
+namespace IPlayer {
+    query get_login_data(
+        account_id: byte_array,
+        local_version: integer,
+        timestamp
+    ) {
+        val player = Player.get_by_account_id(account_id);
+        return (
+            player_data = Player.get_login_data(player, timestamp)
+        );
+    }
+
+    query does_exist(account_id: byte_array) {
+        return Player.does_exist(account_id);
+    }
+}

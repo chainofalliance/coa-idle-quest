@@ -1,0 +1,43 @@
+namespace Random {
+    object o_state {
+        mutable state: byte_array = x"deadbeef"; // use static seed initialization for tests
+    }
+
+    function number_in_range(from: integer, to: integer): integer {
+        require(
+            from <= to,
+            "To must be higher than from"
+        );
+        return from + next_integer(to - from);
+    }
+
+    function next(seed: byte_array? = null): byte_array {
+        // custom seeds hold their own state, so just hash it
+        if (seed??) {
+            return (seed).hash();
+        } else if (not op_context.exists) {
+            return o_state.state;
+        } else {
+            val new_state = (
+                o_state.state,
+                op_context.transaction.tx_hash
+            ).hash();
+
+            o_state.state = new_state;
+
+            return new_state;
+        }
+    }
+
+    function next_hex(seed: byte_array? = null): text {
+        return next(seed).to_hex();
+    }
+
+    function next_integer(max: integer, seed: byte_array? = null): integer {
+        return to_integer(next(seed)) % max;
+    }
+
+    function to_integer(random: byte_array): integer {
+        return integer.from_hex(random.to_hex().sub(0, 14));
+    }
+}

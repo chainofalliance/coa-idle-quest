@@ -1,0 +1,15 @@
+namespace IShop {
+    operation refresh() {
+        val account = ft4.auth.authenticate();
+        val player = Player.get_by_account(account);
+
+        HeroShop.refresh(player);
+    }
+    
+    operation buy(hero_id: byte_array) {
+        val account = ft4.auth.authenticate();
+        val player = Player.get_by_account(account);
+        
+        HeroShop.buy(player, hero_id);
+    }
+}

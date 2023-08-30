@@ -1,0 +1,33 @@
+namespace IExpedition {
+    operation start(hero_ids: list<byte_array>) {
+        val account = ft4.auth.authenticate();
+        val player = Player.get_by_account(account);
+
+        var heroes = Hero.get_all(hero_ids);
+        Expedition.construct(player, heroes);
+    }
+
+    operation advance(id: byte_array, action_id: integer) {
+        val account = ft4.auth.authenticate();
+        val player = Player.get_by_account(account);
+
+        var expedition = Expedition.get(id);
+        Expedition.advance(expedition, action_id);
+    }
+
+    operation retreat(id: byte_array, action_id: integer) {
+        val account = ft4.auth.authenticate();
+        val player = Player.get_by_account(account);
+
+        var expedition = Expedition.get(id);
+        Expedition.retreat(expedition);
+    }
+
+    operation finish(id: byte_array) {
+        val account = ft4.auth.authenticate();
+        val player = Player.get_by_account(account);
+
+        var expedition = Expedition.get(id);
+        Expedition.finish(expedition);
+    }
+}

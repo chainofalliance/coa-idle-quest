@@ -1,0 +1,139 @@
+namespace Hero {
+    enum e_rarity {
+        common,
+        uncommon,
+        rare,
+        magical,
+        legendary
+    }
+
+    entity __def {
+        id: byte_array;
+        blessing: Blessing.__def;
+        head: Fragment.__def;
+        torso: Fragment.__def;
+        arms: Fragment.__def;
+        legs: Fragment.__def;
+    }
+
+    function construct(player: Player.__def, hero_struct: struct<__def>) {
+        var hero = create Hero.__def (hero_struct);
+        create PlayerHero.__def (hero, player);
+        return hero;
+    }
+
+    function RARITY_CHANCE() = map<e_rarity, integer>([
+        e_rarity.common: 100,
+        e_rarity.uncommon: 75,
+        e_rarity.rare: 50,
+        e_rarity.magical: 25,
+        e_rarity.legendary: 0
+    ]);
+    
+    function get(hero_id: byte_array) {
+        return __def @* {hero_id};
+    }
+
+    function get_all(hero_ids: list<byte_array>) {
+        return __def @* {.id in hero_ids};
+    }
+
+    function get_health(hero: __def) {
+        return 20;
+    }
+    
+    function get_random(increase: integer = 0) {
+        return get_with_rarity(Blessing.get_random(increase), increase);
+    }
+
+    function get_with_rarity(blessing_rarity: e_rarity, increase: integer = 0) {
+        var blessings = Blessing.__def @* {blessing_rarity};
+        var blessing = blessings[Random.next_integer(blessings.size())];
+
+        var fragment_rarities = list(Blessing.FRAGMENT_DISTRIBUTION()[blessing_rarity]);
+        var fragments = list<Fragment.__def>();
+        var idx = 0;
+        while (fragment_rarities.size() > 0) {
+            var fragment_rarity = fragment_rarities[Random.next_integer(fragment_rarities.size())];
+            fragment_rarities.remove(fragment_rarity);
+
+            var type = Fragment.e_type.value(idx++);
+            var valid_fragments = Fragment.__def @* {fragment_rarity, type};
+            var fragment = valid_fragments[Random.next_integer(valid_fragments.size())];
+            fragments.add(fragment);
+        }
+
+        return struct<__def>(
+            id = Random.next(),
+            blessing,
+            head = fragments[0],
+            torso = fragments[1],
+            arms = fragments[2],
+            legs = fragments[3]
+        );
+    }
+}
+
+namespace Blessing {
+    entity __def {
+        name;
+        e_class;
+        Hero.e_rarity;
+    }
+
+    enum e_class {
+        bard,
+        fighter,
+        mage,
+        paladin,
+        ranger
+    }
+
+    function RARITY_CHANCE() = map<Hero.e_rarity, integer>([
+        Hero.e_rarity.common: 100,
+        Hero.e_rarity.uncommon: 75,
+        Hero.e_rarity.rare: 50,
+        Hero.e_rarity.magical: 25,
+        Hero.e_rarity.legendary: 0
+    ]);
+
+    function FRAGMENT_DISTRIBUTION() = map<Hero.e_rarity, list<Hero.e_rarity>>([
+        Hero.e_rarity.common: [Hero.e_rarity.common, Hero.e_rarity.common, Hero.e_rarity.common, Hero.e_rarity.common],
+        Hero.e_rarity.uncommon: [Hero.e_rarity.common, Hero.e_rarity.common, Hero.e_rarity.common, Hero.e_rarity.common],
+        Hero.e_rarity.rare: [Hero.e_rarity.common, Hero.e_rarity.common, Hero.e_rarity.common, Hero.e_rarity.common],
+        Hero.e_rarity.magical: [Hero.e_rarity.common, Hero.e_rarity.common, Hero.e_rarity.common, Hero.e_rarity.common],
+        Hero.e_rarity.legendary: [Hero.e_rarity.common, Hero.e_rarity.common, Hero.e_rarity.common, Hero.e_rarity.common]
+    ]);
+
+    function get_random(increase: integer = 0) {
+        val chances = RARITY_CHANCE();
+        val aggregate = chances @ {} (@sum $[1]) + (increase * chances.size());
+        var rnd = Random.next_integer(aggregate) + 1;
+
+        var idx = 0;
+        while (true) {
+            rnd -= chances[Hero.e_rarity.value(idx)] + increase;
+            if (rnd <= 0)
+                break;
+            else
+                idx++;
+        }
+
+        return Hero.e_rarity.value(idx);
+    }
+}
+
+namespace Fragment {
+    entity __def {
+        name;
+        e_type;
+        Hero.e_rarity;
+    }
+
+    enum e_type {
+        head,
+        torso,
+        arms,
+        legs
+    }
+}
