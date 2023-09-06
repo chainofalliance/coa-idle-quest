@@ -6,10 +6,24 @@ namespace IShop {
         HeroShop.refresh(player);
     }
     
-    operation buy(hero_id: byte_array) {
+    operation buy_hero(hero_id: byte_array) {
         val account = ft4.auth.authenticate();
         val player = Player.get_by_account(account);
         
         HeroShop.buy(player, hero_id);
+    }
+    
+    operation buy_consumable(Consumable.e_type) {
+        val account = ft4.auth.authenticate();
+        val player = Player.get_by_account(account);
+        
+        ConsumableShop.buy(player, e_type);
+    }
+    
+    operation buy_backpack(Hero.e_rarity) {
+        val account = ft4.auth.authenticate();
+        val player = Player.get_by_account(account);
+        
+        BackpackShop.buy(player, e_rarity);
     }
 }

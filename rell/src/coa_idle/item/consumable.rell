@@ -1,0 +1,29 @@
+namespace Consumable {
+    enum e_type {
+        health_potion_s,
+        health_potion_m,
+        health_potion_l,
+        strength_potion_s,
+        strength_potion_m,
+        strength_potion_l,
+        max,
+    }
+
+    function use(consumable: e_type, challenge: Challenge.__def) {
+        val effect = EFFECT_MAPPING()[consumable];
+        if (consumable.name.starts_with("health_potion")) {
+            update ExpeditionParty.__def @* {challenge.expedition} (.health = min(.health + effect, .hero.health));
+        } else {
+            create Challenge.effect (challenge, consumable); 
+        }
+    }
+
+    function EFFECT_MAPPING() = map<e_type, integer>([
+        e_type.health_potion_s: 30,
+        e_type.health_potion_m: 60,
+        e_type.health_potion_l: 120,
+        e_type.strength_potion_s: 5,
+        e_type.strength_potion_m: 10,
+        e_type.strength_potion_l: 15
+    ]);
+}

@@ -1,33 +1,52 @@
 namespace IExpedition {
-    operation start(hero_ids: list<byte_array>) {
+    operation start(
+        hero_ids: list<byte_array>,
+        items: list<Consumable.e_type>,
+        difficulty: Expedition.e_difficulty,
+        backpack: Hero.e_rarity
+    ) {
         val account = ft4.auth.authenticate();
         val player = Player.get_by_account(account);
 
         var heroes = Hero.get_all(hero_ids);
-        Expedition.construct(player, heroes);
+        Expedition.construct(player, heroes, items, difficulty, backpack);
     }
 
-    operation advance(id: byte_array, action_id: integer) {
+    operation use_consumable(challenge_id: byte_array, consumable: Consumable.e_type) {
         val account = ft4.auth.authenticate();
         val player = Player.get_by_account(account);
 
-        var expedition = Expedition.get(id);
-        Expedition.advance(expedition, action_id);
+        var challenge = Challenge.get(challenge_id);
+        require(challenge.expedition.player == player);
+        Expedition.use_consumbale(challenge, consumable);
     }
 
-    operation retreat(id: byte_array, action_id: integer) {
+    // TODO drop consumable/loot
+
+    operation advance(challenge_id: byte_array, action: Challenge.e_action) {
         val account = ft4.auth.authenticate();
         val player = Player.get_by_account(account);
 
-        var expedition = Expedition.get(id);
-        Expedition.retreat(expedition);
+        var challenge = Challenge.get(challenge_id);
+        require(challenge.expedition.player == player);
+        Challenge.select_action(challenge, action);
     }
 
-    operation finish(id: byte_array) {
+    operation retreat(expedition_id: byte_array, action_id: integer) {
         val account = ft4.auth.authenticate();
         val player = Player.get_by_account(account);
 
-        var expedition = Expedition.get(id);
+        var expedition = Expedition.get(expedition_id);
+        require(expedition.player == player);
+        Challenge.retreat(expedition);
+    }
+
+    operation finish(expedition_id: byte_array) {
+        val account = ft4.auth.authenticate();
+        val player = Player.get_by_account(account);
+
+        var expedition = Expedition.get(expedition_id);
+        require(expedition.player == player);
         Expedition.finish(expedition);
     }
 }

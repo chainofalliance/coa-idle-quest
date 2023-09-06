@@ -5,4 +5,12 @@ namespace IShop {
         val player = Player.get_by_account_id(account_id);
         return HeroShop.get(player);
     }
+
+    query get_consumables() {
+        return ConsumableShop.PRICE_MAP();
+    }
+    
+    query get_backpacks() {
+        return BackpackShop.PRICE_MAP();
+    }
 }

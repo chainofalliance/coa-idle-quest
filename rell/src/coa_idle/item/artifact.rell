@@ -1,0 +1,12 @@
+namespace Artifact {
+    // TODO definition
+    function name(Challenge.e_terrain, Hero.e_rarity) = "artifact_%s_%s".format(e_terrain, e_rarity.name);
+
+    function SELL_PRICE() = map<Hero.e_rarity, integer>([
+        Hero.e_rarity.common: 3,
+        Hero.e_rarity.uncommon: 4,
+        Hero.e_rarity.rare: 6,
+        Hero.e_rarity.magical: 8,
+        Hero.e_rarity.legendary: 10
+    ]);
+}

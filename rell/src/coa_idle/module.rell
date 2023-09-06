@@ -4,6 +4,7 @@ import .api.*;
 
 import .expedition.*;
 import .hero.*;
+import .item.*;
 import .player.*;
 import .random.*;
 import .shop.*;

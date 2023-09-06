@@ -1,0 +1,26 @@
+namespace Backpack {
+    function name(Hero.e_rarity) = "backpack_" + e_rarity.name;
+
+    function CONSUMABLE_SPACE() = map<Hero.e_rarity, integer>([
+        Hero.e_rarity.common: 3,
+        Hero.e_rarity.uncommon: 4,
+        Hero.e_rarity.rare: 6,
+        Hero.e_rarity.magical: 8,
+        Hero.e_rarity.legendary: 10
+    ]);
+
+    function LOOT_SPACE() = map<Hero.e_rarity, integer>([
+        Hero.e_rarity.common: 2,
+        Hero.e_rarity.uncommon: 3,
+        Hero.e_rarity.rare: 3,
+        Hero.e_rarity.magical: 4,
+        Hero.e_rarity.legendary: 5
+    ]);
+
+    function get_space(Hero.e_rarity) {
+        return (
+            consumable = CONSUMABLE_SPACE()[e_rarity],
+            loot = LOOT_SPACE()[e_rarity]
+        );
+    }
+}

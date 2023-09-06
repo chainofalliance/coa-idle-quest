@@ -1,19 +1,41 @@
 namespace Expedition {
+    enum e_difficulty {
+        easy,
+        normal,
+        hard        
+    }
+
     entity __def {
         id: byte_array;
         player: Player.__def;
+        backpack_rarity: Hero.e_rarity;
+        mutable e_difficulty;
         created_at: timestamp = now();
         mutable returned: boolean = false;
     }
 
-    function construct(player: Player.__def, heroes: list<Hero.__def>) {
+    function construct(
+        player: Player.__def,
+        heroes: list<Hero.__def>,
+        items: list<Consumable.e_type>,
+        e_difficulty,
+        backpack: Hero.e_rarity
+    ) {
         var owners = heroes @* {} (@group PlayerHero.get_owner($));
         var owner = owners[0];
         require(owners.size() == 1);
         require(owner == player);
+        require(items.size() <= Backpack.CONSUMABLE_SPACE()[backpack]);
 
-        val expedition = create __def(Random.next(), player);
+        val expedition = create __def(Random.next(), player, e_difficulty, backpack);
         ExpeditionParty.construct(expedition, heroes);
+
+        if (backpack != Hero.e_rarity.common)
+            PlayerInventory.remove(player, Backpack.name(backpack), 1);
+        for (item in items) {
+            PlayerInventory.remove(player, item.name, 1);
+            ExpeditionConsumables.construct(expedition, item);
+        }
 
         Challenge.next(expedition);
     }
@@ -23,33 +45,58 @@ namespace Expedition {
     }
 
     function get_all(player: Player.__def) {
-        return __def @* {player, .returned == false} (
+        return __def @* {player} (
             id = .id,
+            difficulty = .e_difficulty,
             created_at = .created_at,
-            retreat_at = Challenge.get_cancel($)?.arrival_at,
-            next_challenge = Challenge.get_definition($)
+            challenges = get_overview($)
         );
     }
 
-    function advance(expedition: Expedition.__def, action_id: integer, timestamp = now()) {
-        require(not expedition.returned);
-
-        var challenge = Challenge.get_latest(expedition);
-        require(challenge.arrival_at <= timestamp);
-
-        Challenge.resolve(challenge, action_id);
+    function get_all_ongoing(player: Player.__def) {
+        return __def @* {player, .returned == false} (
+            id = .id,
+            difficulty = .e_difficulty,
+            created_at = .created_at,
+            challenges = get_overview($)
+        );
     }
 
-    function retreat(expedition: Expedition.__def) {
-        Challenge.retreat(expedition);
+    function get_overview(expedition: __def) {
+        val challenge = Challenge.get_active(expedition);
+        return (
+            party = ExpeditionParty.get_overview(expedition),
+            challenge = if (challenge??) Challenge.get_overview(challenge) else null,
+            arrival_at = if (challenge??) Challenge.get_arrival(challenge) else Challenge.get_retreat(expedition)
+        );
+    }
+    
+    function get_definition(expedition: __def) {
+        val challenge = Challenge.get_active(expedition);
+        return (
+            party = ExpeditionParty.get_overview(expedition),
+            challenges = Challenge.get_all(expedition),
+            arrival_at = if (challenge??) Challenge.get_arrival(challenge) else Challenge.get_retreat(expedition)
+        );
+    }
+    
+    function bump_difficulty(expedition: Expedition.__def) {
+        expedition.e_difficulty = e_difficulty.value(min(expedition.e_difficulty.value + 1, e_difficulty.hard.value));
+    }
+
+    function use_consumbale(challenge: Challenge.__def, consumable: Consumable.e_type) {
+        require(Challenge.cancel @? {challenge.expedition} == null);
+        ExpeditionConsumables.use(challenge, consumable);
     }
 
     function finish(expedition: Expedition.__def, timestamp = now()) {
+        require(not expedition.returned);
         var retreat = Challenge.cancel @ {expedition};
-        require(retreat.arrival_at <= timestamp);
+        require(retreat.timestamp <= timestamp);
 
         expedition.returned = true;
-        ExpeditionLoot.claim(expedition);
+        ChallengeLoot.claim(expedition);
+        // TODO delete or return consumables?
     }
 }
 
@@ -63,34 +110,55 @@ namespace ExpeditionParty {
     }
 
     function construct(expedition: Expedition.__def, heroes: list<Hero.__def>) {
-        for (hero in heroes)
-            create ExpeditionParty.__def(expedition, hero, Hero.get_health(hero));
+        for (hero in heroes) {
+            create ExpeditionParty.__def(expedition, hero, hero.health);
+        }
     }
 
     function get(expedition: Expedition.__def) {
+        return __def @* {expedition};
+    }
+
+    function get_overview(expedition: Expedition.__def) {
         return __def @* {expedition} (
-            hero = .hero,
-            health = .health
+            id = .hero.id,
+            rarity = .hero.e_rarity,
+            classs = .hero.e_class,
+            species = .hero.e_species,
+            health = .health,
+            max_health = .hero.health
         );
     }
 }
 
-namespace ExpeditionLoot {
+namespace ExpeditionConsumables {
+    enum e_state {
+        usable,
+        used,
+        lost
+    }
+
     entity __def {
         expedition: Expedition.__def;
-        e_type;
-        amount: integer;
-        mutable claimed: boolean = false;
+        type: Consumable.e_type;
+        mutable state: e_state = e_state.usable;
     }
 
-    enum e_type {
-        shards,
-        hero,
-        backpack,
-        consumable
+    function construct(expedition: Expedition.__def, type: Consumable.e_type) {
+        create __def (expedition, type);
     }
 
-    function claim(expedition: Expedition.__def) {
-        
+    function add_random(expedition: Expedition.__def) {
+        construct(expedition, Consumable.e_type.value(Random.next_integer(Consumable.e_type.max.value)));
+    }
+
+    function use(challenge: Challenge.__def, consumable: Consumable.e_type) {
+        val e = __def @ {challenge.expedition, consumable, e_state.usable} limit 1;
+        Consumable.use(consumable, challenge);
+        e.state = e_state.used;
+    }
+
+    function on_wipe(expedition: Expedition.__def) {
+        update __def @ {expedition, e_state.usable} (.state = e_state.lost);
     }
 }

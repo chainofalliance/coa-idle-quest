@@ -24,13 +24,20 @@ namespace Player {
 
     function get_login_data(player: __def, timestamp) {
         return (
-            null
+            shards = player.shards,
+            expeditions = Expedition.get_all_ongoing(player)
         );
     }    
 
     function deduct(player: Player.__def, shards: integer) {
+        require(shards >= 0);
         require(player.shards >= shards);
         player.shards -= shards;
+    }
+
+    function give_shards(player: Player.__def, shards: integer) {
+        require(shards >= 0);
+        player.shards += shards;
     }
 }
 
@@ -46,5 +53,34 @@ namespace PlayerHero {
 
     function get_heroes(player: Player.__def) {
         return __def @* {player}.hero;
+    }
+}
+
+namespace PlayerInventory {
+    entity __def {
+        key player: Player.__def;
+        item: name;
+        mutable amount: integer;
+    }
+
+    function ensure(player: Player.__def, item: name) {
+        var inv = __def @? {player, item};
+        if (inv == null)
+            inv = create __def (player, item , 0);
+
+        return inv;
+    }
+
+    function give(player: Player.__def, item: name, amount: integer) {
+        require(amount >= 0);
+        val inv = ensure(player, item);
+        inv.amount += amount;
+    }
+
+    function remove(player: Player.__def, item: name, amount: integer) {
+        require(amount >= 0);
+        val inv = ensure(player, item);
+        require(inv.amount >= amount);
+        inv.amount -= amount;
     }
 }

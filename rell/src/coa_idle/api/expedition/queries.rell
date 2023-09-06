@@ -1,8 +1,22 @@
 namespace IExpedition {
-    query get_active(
+    query get_all(
         account_id: byte_array
     ) {
         val player = Player.get_by_account_id(account_id);
         return Expedition.get_all(player);
+    }
+
+    query get_active(
+        account_id: byte_array
+    ) {
+        val player = Player.get_by_account_id(account_id);
+        return Expedition.get_all_ongoing(player);
+    }
+
+    query get_result(
+        challenge_id: byte_array
+    ) {
+        var challenge = Challenge.get(challenge_id);
+        return Challenge.get_definition(challenge);
     }
 }
