@@ -448,6 +448,7 @@ namespace ChallengeLoot {
     entity __def {
         challenge: Challenge.__def;
         e_type;
+        name;
         amount: integer;
         mutable state: e_state = e_state.open;
     }
@@ -461,10 +462,11 @@ namespace ChallengeLoot {
 
     function construct(
         challenge: Challenge.__def,
+        name,
         e_type,
         amount: integer
     ) {
-        return create __def (challenge, e_type, amount);
+        return create __def (challenge, name, e_type, amount);
     }
 
     function get_definition(challenge: Challenge.__def) {
@@ -478,7 +480,7 @@ namespace ChallengeLoot {
     // TODO after artifact definition
     function create_random(challenge: Challenge.__def, Challenge.outcome) {
         val win_idx = if (outcome.success) 1 else 0;
-        construct(challenge, e_type.shards, SHARD_REWARDS()[challenge.e_difficulty][win_idx]);
+        construct(challenge, "shards", e_type.shards, SHARD_REWARDS()[challenge.e_difficulty][win_idx]);
 
         val spaces = Backpack.get_space(challenge.expedition.backpack_rarity);
         var consumable_space = ExpeditionConsumables.__def @ {challenge.expedition} (@sum 1);
@@ -489,10 +491,18 @@ namespace ChallengeLoot {
             val rnd = Random.next_integer(100) + 1;
             if (rnd > reward_chance_map[i]) {
                 val type = random_type(challenge.e_difficulty, outcome.success);
-                if (type == e_type.consumable and consumable_space < spaces.consumable) {
-                    ExpeditionConsumables.add_random(challenge.expedition);
-                } else if (loot_space < spaces.loot) {
-                    construct(challenge, type, 1);
+                val e = construct(challenge, "TODO change me", type, 1);
+                if (type == e_type.consumable) {
+                    if (consumable_space < spaces.consumable) {
+                        ExpeditionConsumables.add_random(challenge.expedition);
+                        e.state = e_state.claimed;
+                    } else {
+                        e.state = e_state.dropped;
+                    }
+                } else {
+                    if (loot_space < spaces.loot) {
+                        e.state = e_state.dropped;
+                    }
                 }
             }
         }
@@ -504,7 +514,7 @@ namespace ChallengeLoot {
 
         val rest =  __def @* {.challenge.expedition == expedition, .e_type != e_type.shards, .state == e_state.open};
         for (item in rest) {
-            PlayerInventory.give(expedition.player, item.e_type.name, 1);
+            PlayerInventory.give(expedition.player, item.name, 1);
         }
 
         update __def @* {.challenge.expedition == expedition, .state != e_state.open} (.state = e_state.claimed);
@@ -515,8 +525,8 @@ namespace ChallengeLoot {
         var shards = __def @* {.challenge.expedition == expedition, .e_type == e_type.shards, .state == e_state.open};
         for (shard in shards) {
             val lost = shard.amount/2;
-            construct(shard.challenge, e_type.shards, lost).state = e_state.lost;
-            construct(shard.challenge, e_type.shards, shard.amount - lost);
+            construct(shard.challenge, "shards", e_type.shards, lost).state = e_state.lost;
+            construct(shard.challenge, "shards", e_type.shards, shard.amount - lost);
         }
         delete shards;
     }
