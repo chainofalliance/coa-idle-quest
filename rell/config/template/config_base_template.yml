@@ -9,3 +9,5 @@ blockchains:
         rate_limit_points_at_account_creation: 1
       lib.ft4.admin:
         admin_pubkey: ${ADMIN_PUBKEY}
+      coa_idle.expedition:
+        travel_time: 5
