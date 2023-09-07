@@ -10,4 +10,4 @@ blockchains:
       lib.ft4.admin:
         admin_pubkey: ${ADMIN_PUBKEY}
       coa_idle.expedition:
-        travel_time: 5
+        travel_time: 5000
