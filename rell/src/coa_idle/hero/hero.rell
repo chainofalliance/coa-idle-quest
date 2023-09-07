@@ -27,9 +27,9 @@ namespace Hero {
     entity __def {
         id: byte_array;
         name;
-        e_rarity;
-        e_class;
-        e_species;
+        rarity: e_rarity;
+        classs: e_class;
+        species: e_species;
         health: integer;
     }
 
@@ -51,9 +51,9 @@ namespace Hero {
         return (
             id = hero.id,
             name = hero.name,
-            rarity = hero.e_rarity,
-            classs = hero.e_class,
-            species = hero.e_species,
+            rarity = hero.rarity,
+            classs = hero.classs,
+            species = hero.species,
             health = hero.health
         );
     }

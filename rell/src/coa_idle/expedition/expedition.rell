@@ -137,9 +137,9 @@ namespace ExpeditionParty {
         return __def @* {expedition} (
             id = .hero.id,
             name = .hero.name,
-            rarity = .hero.e_rarity,
-            classs = .hero.e_class,
-            species = .hero.e_species,
+            rarity = .hero.rarity,
+            classs = .hero.classs,
+            species = .hero.species,
             health = .health,
             max_health = .hero.health
         );

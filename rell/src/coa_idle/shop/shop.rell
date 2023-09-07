@@ -53,7 +53,7 @@ namespace HeroShop {
         for (i in range(amount)) {
             val rarity = if (is_starting) Hero.e_rarity.common else Hero.get_random_rarity(max_rarity);
             val hero =  Hero.get_with_rarity(rarity);
-            val price = if (is_starting) 0 else PRICE_MAP()[hero.e_rarity];
+            val price = if (is_starting) 0 else PRICE_MAP()[hero.rarity];
             create __def (player, hero_id=hero.id, hero=hero.to_bytes(), price);
         }
     }

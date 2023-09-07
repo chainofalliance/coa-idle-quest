@@ -198,7 +198,7 @@ namespace Challenge {
         var party = ExpeditionParty.get(challenge.expedition);
 
         var chance = if (chance_in??) chance_in else CHALLENGE_SUCCESS_CHANCE()[challenge.e_difficulty];
-        if (party @ {.hero.e_class == challenge.class_advantage, .health > 0} (@sum 1) > 0)
+        if (party @ {.hero.classs == challenge.class_advantage, .health > 0} (@sum 1) > 0)
             chance += BONUS_MATCH_CLASS; 
 
         val effects = effect @* {challenge};
@@ -213,7 +213,7 @@ namespace Challenge {
         val alive_members = party @* {.health > 0};
         for (member in party) {
             var rnd = Random.next_integer(100) + 1;
-            val hero_chance = if (member.hero.e_species == species_favor) chance + BONUS_MATCH_SPECIES else chance;
+            val hero_chance = if (member.hero.species == species_favor) chance + BONUS_MATCH_SPECIES else chance;
             var damage = DAMAGE_MAP()[challenge.e_difficulty][challenge.expedition.e_danger_level];
             val success = rnd > hero_chance;
             damage = if (success) damage else (damage * 0.2).to_integer();
