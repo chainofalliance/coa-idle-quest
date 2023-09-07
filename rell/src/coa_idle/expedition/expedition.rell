@@ -1,15 +1,17 @@
 namespace Expedition {
-    enum e_difficulty {
-        easy,
-        normal,
-        hard        
+    enum e_danger_level {
+        neglible,
+        harmless,
+        unhealthy,
+        interesting,
+        seriously
     }
 
     entity __def {
         id: byte_array;
         player: Player.__def;
         backpack_rarity: Hero.e_rarity;
-        mutable e_difficulty;
+        mutable e_danger_level;
         created_at: timestamp = now();
         mutable returned: boolean = false;
     }
@@ -18,7 +20,7 @@ namespace Expedition {
         player: Player.__def,
         heroes: list<Hero.__def>,
         items: list<Consumable.e_type>,
-        e_difficulty,
+        e_danger_level,
         backpack: Hero.e_rarity
     ) {
         var owners = heroes @* {} (@group PlayerHero.get_owner($));
@@ -27,7 +29,7 @@ namespace Expedition {
         require(owner == player);
         require(items.size() <= Backpack.CONSUMABLE_SPACE()[backpack]);
 
-        val expedition = create __def(Random.next(), player, e_difficulty, backpack);
+        val expedition = create __def(Random.next(), player, e_danger_level, backpack);
         ExpeditionParty.construct(expedition, heroes);
 
         if (backpack != Hero.e_rarity.common)
@@ -47,7 +49,7 @@ namespace Expedition {
     function get_all(player: Player.__def) {
         return __def @* {player} (
             id = .id,
-            difficulty = .e_difficulty,
+            difficulty = .e_danger_level,
             created_at = .created_at,
             challenges = get_overview($)
         );
@@ -56,7 +58,7 @@ namespace Expedition {
     function get_all_ongoing(player: Player.__def) {
         return __def @* {player, .returned == false} (
             id = .id,
-            difficulty = .e_difficulty,
+            difficulty = .e_danger_level,
             created_at = .created_at,
             challenges = get_overview($)
         );
@@ -81,7 +83,7 @@ namespace Expedition {
     }
     
     function bump_difficulty(expedition: Expedition.__def) {
-        expedition.e_difficulty = e_difficulty.value(min(expedition.e_difficulty.value + 1, e_difficulty.hard.value));
+        expedition.e_danger_level = e_danger_level.value(min(expedition.e_danger_level.value + 1, e_danger_level.seriously.value));
     }
 
     function use_consumbale(challenge: Challenge.__def, consumable: Consumable.e_type) {

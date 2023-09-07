@@ -7,9 +7,7 @@ val TRAVEL_TIME = chain_context.args.travel_time;
 namespace Challenge {
     enum e_type {
         fight,
-        check,
-        fountain,
-        boss
+        check
     }
 
     enum e_terrain {
@@ -48,6 +46,7 @@ namespace Challenge {
         e_type;
         e_difficulty;
         e_terrain;
+        class_advantage: Hero.e_class;
 
         key id;
     }
@@ -72,6 +71,8 @@ namespace Challenge {
 
     entity outcome {
         key challenge: __def;
+        hero_id: byte_array;
+        damage: integer;
         needed: integer;
         roll: integer;
         success: boolean;
@@ -113,7 +114,8 @@ namespace Challenge {
             difficulty = challenge.e_difficulty,
             terrain = challenge.e_terrain,
             states = get_states_definition(challenge),
-            outcome = get_outcome_definition(challenge)
+            outcome = get_outcome_definition(challenge),
+            loot = ChallengeLoot.get_definition(challenge)
         );
     }
 
@@ -138,11 +140,12 @@ namespace Challenge {
     }
 
     function get_outcome_definition(challenge: __def) {
-        return outcome @? {challenge} (
+        return outcome @* {challenge} (
+            hero_id = .hero_id,
+            damage = .damage,
             needed = .needed,
             roll = .roll,
-            success = .success,
-            loot = ChallengeLoot.get_definition(challenge)
+            success = .success
         );
     }
 
@@ -176,7 +179,7 @@ namespace Challenge {
         }
 
         if (not is_party_wiped(challenge))
-            next(challenge.expedition, challenge.level, challenge.e_terrain);
+            next(challenge.expedition, challenge.level);
     }
 
     function resolve(challenge: __def, chance_in: integer? = null) {
@@ -185,9 +188,8 @@ namespace Challenge {
         var party = ExpeditionParty.get(challenge.expedition);
 
         var chance = if (chance_in??) chance_in else CHALLENGE_SUCCESS_CHANCE()[challenge.e_difficulty];
-        val species_favor = SPECIES_FAVOR()[challenge.e_terrain];
-        if (party @* {.hero.e_species == species_favor, .health > 0} (@sum 1).size() > 0)
-            chance += 25; 
+        if (party @ {.hero.e_class == challenge.class_advantage, .health > 0} (@sum 1) > 0)
+            chance += BONUS_MATCH_CLASS; 
 
         val effects = effect @* {challenge};
         for (effect in effects) {
@@ -197,16 +199,34 @@ namespace Challenge {
             }
         }
 
-        var rnd = Random.next_integer(100) + 1;
-        var outcome = create outcome (challenge, needed = chance, roll = rnd, rnd > chance);
+        val species_favor = SPECIES_FAVOR()[challenge.e_terrain];
+        val alive_members = party @* {.health > 0};
+        for (member in party) {
+            var rnd = Random.next_integer(100) + 1;
+            val hero_chance = if (member.hero.e_species == species_favor) chance + BONUS_MATCH_SPECIES else chance;
+            var damage = DAMAGE_MAP()[challenge.e_difficulty][challenge.expedition.e_danger_level];
+            val success = rnd > hero_chance;
+            damage = if (success) damage else (damage * 0.2).to_integer();
 
-        if (rnd > chance) {
-            for (member in party) {
-                member.health -= DAMAGE_MAP()[challenge.e_difficulty][member.hero.e_rarity];
+            if (member.health > 0) {
+                member.health = max(0, member.health - damage);
+            } else {
+                for (alive_member in alive_members) {
+                    alive_member.health = max(0, alive_member.health - (damage / alive_members.size()));
+                }
             }
-        } else {
-            ChallengeLoot.create_random(challenge, outcome);
+
+            create outcome (
+                challenge,
+                member.hero.id,
+                damage,
+                needed = hero_chance,
+                roll = rnd,
+                success
+            );
         }
+
+        ChallengeLoot.create_random(challenge);
     }
 
     function skip(challenge: __def) {
@@ -236,24 +256,22 @@ namespace Challenge {
     
     function next(
         expedition: Expedition.__def,
-        previous_level: integer = 0,
-        previous_terrain: e_terrain? = null
+        previous_level: integer = 0
     ) {
         val new_level = (previous_level % 10) + 1;
-        val paths = if ([9, 10].contains(new_level)) 1 else 2; // one path to and from boss -> new terrain
+        val paths = if (new_level == 10) 1 else 2; // one path to boss
         if (previous_level == 10) // was in boss level -> increase difficulty
             Expedition.bump_difficulty(expedition);
         
         for (i in range(paths)) {
-            var type = random_type(new_level);
-            var terrain = if (previous_terrain == null or new_level == 1) random_terrain(previous_terrain) else previous_terrain;
-            var difficulty = DIFFICULTY_MAP()[expedition.e_difficulty][new_level];
+            var terrain = random_terrain();
             var challenge = create __def(
                 (expedition.id, new_level, i).hash(),
                 new_level,
-                type,
+                random_type(),
                 terrain,
-                difficulty,
+                DIFFICULTY_MAP()[expedition.e_danger_level][new_level],
+                Hero.get_random_class(),
                 expedition
             );
             set_selectable(challenge);
@@ -275,10 +293,8 @@ namespace Challenge {
     // +++++++++++++++++
     // RANDOM
     // +++++++++++++++++
-    function random_type(challenge_count: integer) {
+    function random_type() {
         var chances = CHALLENGE_CHANCE();
-        chances[e_type.fountain] += 10 * challenge_count % 10;
-
         var chances_max = chances @ {} (@sum $[1]);
         
         var rnd = Random.next_integer(chances_max)+1;
@@ -294,11 +310,8 @@ namespace Challenge {
         return e_type.value(idx);
     }
 
-    function random_terrain(previos_terrain: e_terrain?) {
-        var new_terrain = e_terrain.value(Random.next_integer(e_terrain.max.value));
-        while (previos_terrain != null and new_terrain == previos_terrain)
-            new_terrain = e_terrain.value(Random.next_integer(e_terrain.max.value));
-        return new_terrain;
+    function random_terrain() {
+        return e_terrain.value(Random.next_integer(e_terrain.max.value));
     }
     // +++++++++++++++++
 
@@ -343,14 +356,13 @@ namespace Challenge {
     // +++++++++++++++++
     // GLOBALS
     // +++++++++++++++++
-    val BONUS_MATCH_SPECIES = 25;
+    val BONUS_MATCH_CLASS = 25;
+    val BONUS_MATCH_SPECIES = 5;
     val BYPASS_MALUS = 15;
 
     function CHALLENGE_CHANCE() = map<e_type, integer>([
         e_type.fight: 100,
-        e_type.check: 100,
-        e_type.fountain: 50,
-        e_type.boss: 10
+        e_type.check: 100
     ]);
     
     function ACTION_CHANCE() = list<integer>([
@@ -372,32 +384,32 @@ namespace Challenge {
         e_difficulty.boss: 40
     ]);
 
-    function DAMAGE_MAP() = map<e_difficulty, map<Hero.e_rarity, integer>>([
-        e_difficulty.normal: map<Hero.e_rarity, integer>([
-            Hero.e_rarity.common: 15,
-            Hero.e_rarity.uncommon: 20,
-            Hero.e_rarity.rare: 30,
-            Hero.e_rarity.magical: 45,
-            Hero.e_rarity.legendary: 60
-        ]),
-        e_difficulty.hard: map<Hero.e_rarity, integer>([
-            Hero.e_rarity.common: 30,
-            Hero.e_rarity.uncommon: 40,
-            Hero.e_rarity.rare: 60,
-            Hero.e_rarity.magical: 95,
-            Hero.e_rarity.legendary: 120
-        ]),
-        e_difficulty.boss: map<Hero.e_rarity, integer>([
-            Hero.e_rarity.common: 60,
-            Hero.e_rarity.uncommon: 80,
-            Hero.e_rarity.rare: 120,
-            Hero.e_rarity.magical: 180,
-            Hero.e_rarity.legendary: 240
-        ])
+    function DAMAGE_MAP() = map<e_difficulty, map<Expedition.e_danger_level, integer>>([
+        e_difficulty.normal: [
+            Expedition.e_danger_level.neglible: 15,
+            Expedition.e_danger_level.harmless: 20,
+            Expedition.e_danger_level.unhealthy: 30,
+            Expedition.e_danger_level.interesting: 45,
+            Expedition.e_danger_level.seriously: 60
+        ],
+        e_difficulty.hard: [
+            Expedition.e_danger_level.neglible: 30,
+            Expedition.e_danger_level.harmless: 40,
+            Expedition.e_danger_level.unhealthy: 60,
+            Expedition.e_danger_level.interesting: 90,
+            Expedition.e_danger_level.seriously: 120
+        ],
+        e_difficulty.boss: [
+            Expedition.e_danger_level.neglible: 60,
+            Expedition.e_danger_level.harmless: 80,
+            Expedition.e_danger_level.unhealthy: 120,
+            Expedition.e_danger_level.interesting: 180,
+            Expedition.e_danger_level.seriously: 240
+        ]
     ]);
     
-    function DIFFICULTY_MAP() = map<Expedition.e_difficulty, list<e_difficulty>>([
-        Expedition.e_difficulty.easy: [
+    function DIFFICULTY_MAP() = map<Expedition.e_danger_level, list<e_difficulty>>([
+        Expedition.e_danger_level.neglible: [
             e_difficulty.normal,
             e_difficulty.normal,
             e_difficulty.normal,
@@ -409,7 +421,19 @@ namespace Challenge {
             e_difficulty.normal,
             e_difficulty.boss
         ],
-        Expedition.e_difficulty.normal: [
+        Expedition.e_danger_level.harmless: [
+            e_difficulty.normal,
+            e_difficulty.normal,
+            e_difficulty.normal,
+            e_difficulty.normal,
+            e_difficulty.hard,
+            e_difficulty.normal,
+            e_difficulty.normal,
+            e_difficulty.normal,
+            e_difficulty.normal,
+            e_difficulty.boss
+        ],
+        Expedition.e_danger_level.unhealthy: [
             e_difficulty.normal,
             e_difficulty.normal,
             e_difficulty.normal,
@@ -421,7 +445,19 @@ namespace Challenge {
             e_difficulty.hard,
             e_difficulty.boss
         ],
-        Expedition.e_difficulty.hard: [
+        Expedition.e_danger_level.interesting: [
+            e_difficulty.normal,
+            e_difficulty.normal,
+            e_difficulty.normal,
+            e_difficulty.hard,
+            e_difficulty.normal,
+            e_difficulty.normal,
+            e_difficulty.hard,
+            e_difficulty.normal,
+            e_difficulty.hard,
+            e_difficulty.boss
+        ],
+        Expedition.e_danger_level.seriously: [
             e_difficulty.normal,
             e_difficulty.normal,
             e_difficulty.hard,
@@ -456,7 +492,7 @@ namespace ChallengeLoot {
     enum e_type {
         artifact,
         consumable,
-        special,
+        special, // TODO remove for now
         shards
     }
 
@@ -478,9 +514,8 @@ namespace ChallengeLoot {
     }
 
     // TODO after artifact definition
-    function create_random(challenge: Challenge.__def, Challenge.outcome) {
-        val win_idx = if (outcome.success) 1 else 0;
-        construct(challenge, "shards", e_type.shards, SHARD_REWARDS()[challenge.e_difficulty][win_idx]);
+    function create_random(challenge: Challenge.__def) {
+        construct(challenge, "shards", e_type.shards, SHARD_REWARDS()[challenge.e_difficulty]);
 
         val spaces = Backpack.get_space(challenge.expedition.backpack_rarity);
         var consumable_space = ExpeditionConsumables.__def @ {challenge.expedition} (@sum 1);
@@ -490,7 +525,7 @@ namespace ChallengeLoot {
         for (i in range(MAX_ROLLS)) {
             val rnd = Random.next_integer(100) + 1;
             if (rnd > reward_chance_map[i]) {
-                val type = random_type(challenge.e_difficulty, outcome.success);
+                val type = random_type(challenge.e_difficulty);
                 val e = construct(challenge, "TODO change me", type, 1);
                 if (type == e_type.consumable) {
                     if (consumable_space < spaces.consumable) {
@@ -514,6 +549,7 @@ namespace ChallengeLoot {
 
         val rest =  __def @* {.challenge.expedition == expedition, .e_type != e_type.shards, .state == e_state.open};
         for (item in rest) {
+            // TODO sell artifacts?
             PlayerInventory.give(expedition.player, item.name, 1);
         }
 
@@ -531,15 +567,14 @@ namespace ChallengeLoot {
         delete shards;
     }
 
-    function random_type(difficulty: Challenge.e_difficulty, win: boolean) {
-        val win_idx = if (win) 1 else 0;
+    function random_type(difficulty: Challenge.e_difficulty) {
         val chances = REWARD_DISTRIBUTION()[difficulty];
-        val chances_max = chances @ {} (@sum $[1][win_idx]);
+        val chances_max = chances @ {} (@sum $[1]);
 
         var rnd = Random.next_integer(chances_max) + 1;
         var idx = 0;
         while (true) {
-            rnd -= chances[e_type.value(idx)][win_idx];
+            rnd -= chances[e_type.value(idx)];
             if (rnd <= 0)
                 break;
             else
@@ -554,21 +589,21 @@ namespace ChallengeLoot {
     // +++++++++++++++++
     val MAX_ROLLS = 3;
 
-    function REWARD_DISTRIBUTION() = map<Challenge.e_difficulty, map<e_type, list<integer>>>([
+    function REWARD_DISTRIBUTION() = map<Challenge.e_difficulty, map<e_type, integer>>([
         Challenge.e_difficulty.normal: [
-            e_type.artifact: [50, 100],
-            e_type.consumable: [50, 150],
-            e_type.special: [50, 200]
+            e_type.artifact: 100,
+            e_type.consumable: 150,
+            e_type.special: 200
         ],
         Challenge.e_difficulty.hard: [
-            e_type.artifact: [50, 100],
-            e_type.consumable: [50, 150],
-            e_type.special: [50, 200]
+            e_type.artifact: 100,
+            e_type.consumable: 150,
+            e_type.special: 200
         ],
         Challenge.e_difficulty.boss: [
-            e_type.artifact: [50, 100],
-            e_type.consumable: [50, 150],
-            e_type.special: [50, 200]
+            e_type.artifact: 100,
+            e_type.consumable: 150,
+            e_type.special: 200
         ]
     ]);
 
@@ -578,10 +613,10 @@ namespace ChallengeLoot {
         Challenge.e_difficulty.boss: [100, 100, 75]
     ]);
     
-    function SHARD_REWARDS() = map<Challenge.e_difficulty, list<integer>>([
-        Challenge.e_difficulty.normal: [25, 50],
-        Challenge.e_difficulty.hard: [100, 200],
-        Challenge.e_difficulty.boss: [500, 1000]
+    function SHARD_REWARDS() = map<Challenge.e_difficulty, integer>([
+        Challenge.e_difficulty.normal: 50,
+        Challenge.e_difficulty.hard: 200,
+        Challenge.e_difficulty.boss: 1000
     ]);
     // +++++++++++++++++
 }

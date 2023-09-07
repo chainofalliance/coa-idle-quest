@@ -2,14 +2,14 @@ namespace IExpedition {
     operation start(
         hero_ids: list<byte_array>,
         items: list<Consumable.e_type>,
-        difficulty: Expedition.e_difficulty,
+        danger_level: Expedition.e_danger_level,
         backpack: Hero.e_rarity
     ) {
         val account = ft4.auth.authenticate();
         val player = Player.get_by_account(account);
 
         var heroes = Hero.get_all(hero_ids);
-        Expedition.construct(player, heroes, items, difficulty, backpack);
+        Expedition.construct(player, heroes, items, danger_level, backpack);
     }
 
     operation use_consumable(challenge_id: byte_array, consumable: Consumable.e_type) {

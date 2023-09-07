@@ -17,6 +17,9 @@ namespace IExpedition {
         challenge_id: byte_array
     ) {
         var challenge = Challenge.get(challenge_id);
-        return Challenge.get_definition(challenge);
+        return (
+            current = Challenge.get_definition(challenge),
+            next = Challenge.__def @* {.level == challenge.level + 1} (Challenge.get_definition($))
+        );
     }
 }
