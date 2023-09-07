@@ -10,7 +10,7 @@ namespace Expedition {
     entity __def {
         id: byte_array;
         player: Player.__def;
-        backpack_rarity: Hero.e_rarity;
+        backpack_name: name;
         mutable e_danger_level;
         created_at: timestamp = now();
         mutable returned: boolean = false;
@@ -21,19 +21,20 @@ namespace Expedition {
         heroes: list<Hero.__def>,
         items: list<Consumable.e_type>,
         e_danger_level,
-        backpack: Hero.e_rarity
+        backpack_name: name
     ) {
+        val backpack = Backpack.get(backpack_name);
         var owners = heroes @* {} (@group PlayerHero.get_owner($));
         var owner = owners[0];
         require(owners.size() == 1);
         require(owner == player);
-        require(items.size() <= Backpack.CONSUMABLE_SPACE()[backpack]);
+        require(items.size() <= backpack.consumable);
 
-        val expedition = create __def(Random.next(), player, e_danger_level, backpack);
+        val expedition = create __def(Random.next(), player, e_danger_level, backpack_name);
         ExpeditionParty.construct(expedition, heroes);
 
-        if (backpack != Hero.e_rarity.common)
-            PlayerInventory.remove(player, Backpack.name(backpack), 1);
+        if (backpack.rarity != Hero.e_rarity.common)
+            PlayerInventory.remove(player, backpack_name, 1);
         for (item in items) {
             PlayerInventory.remove(player, item.name, 1);
             ExpeditionConsumables.construct(expedition, item);
@@ -49,25 +50,26 @@ namespace Expedition {
     function get_all(player: Player.__def) {
         return __def @* {player} (
             id = .id,
-            difficulty = .e_danger_level,
+            danger_level = .e_danger_level,
             created_at = .created_at,
-            challenges = get_overview($)
+            party = ExpeditionParty.get_overview($),
+            active_challenge = get_overview($)
         );
     }
 
     function get_all_ongoing(player: Player.__def) {
         return __def @* {player, .returned == false} (
             id = .id,
-            difficulty = .e_danger_level,
+            danger_level = .e_danger_level,
             created_at = .created_at,
-            challenges = get_overview($)
+            party = ExpeditionParty.get_overview($),
+            active_challenge = get_overview($)
         );
     }
 
     function get_overview(expedition: __def) {
         val challenge = Challenge.get_active(expedition);
         return (
-            party = ExpeditionParty.get_overview(expedition),
             challenge = if (challenge??) Challenge.get_overview(challenge) else null,
             arrival_at = if (challenge??) Challenge.get_arrival(challenge) else Challenge.get_retreat(expedition)
         );
@@ -91,9 +93,14 @@ namespace Expedition {
         ExpeditionConsumables.use(challenge, consumable);
     }
 
-    function drop_consumbale(challenge: Challenge.__def, consumable: Consumable.e_type) {
-        require(Challenge.cancel @? {challenge.expedition} == null);
-        ExpeditionConsumables.drop(challenge, consumable);
+    function drop_consumbale(expedition: Expedition.__def, consumable: Consumable.e_type) {
+        require(Challenge.cancel @? {expedition} == null);
+        ExpeditionConsumables.drop(expedition, consumable);
+    }
+
+    function drop_loot(expedition: Expedition.__def, artifact: name) {
+        require(Challenge.cancel @? {expedition} == null);
+        ChallengeLoot.drop(expedition, artifact);
     }
 
     function finish(expedition: Expedition.__def, timestamp = now()) {
@@ -129,6 +136,7 @@ namespace ExpeditionParty {
     function get_overview(expedition: Expedition.__def) {
         return __def @* {expedition} (
             id = .hero.id,
+            name = .hero.name,
             rarity = .hero.e_rarity,
             classs = .hero.e_class,
             species = .hero.e_species,
@@ -172,8 +180,8 @@ namespace ExpeditionConsumables {
         e.state = e_state.used;
     }    
 
-    function drop(challenge: Challenge.__def, consumable: Consumable.e_type) {
-        val e = __def @ {challenge.expedition, consumable, e_state.usable} limit 1;
+    function drop(expedition: Expedition.__def, consumable: Consumable.e_type) {
+        val e = __def @ {expedition, consumable, e_state.usable} limit 1;
         e.state = e_state.lost;
     }
 

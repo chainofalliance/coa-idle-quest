@@ -1,9 +1,14 @@
 namespace IExpedition {
+    @extend(ft4.auth.auth_handler)
+    function () = ft4.auth.add_auth_handler(
+        scope = "IExpedition.start",
+        flags = ["A"]
+    );
     operation start(
         hero_ids: list<byte_array>,
         items: list<Consumable.e_type>,
         danger_level: Expedition.e_danger_level,
-        backpack: Hero.e_rarity
+        backpack: name
     ) {
         val account = ft4.auth.authenticate();
         val player = Player.get_by_account(account);
@@ -12,6 +17,11 @@ namespace IExpedition {
         Expedition.construct(player, heroes, items, danger_level, backpack);
     }
 
+    @extend(ft4.auth.auth_handler)
+    function () = ft4.auth.add_auth_handler(
+        scope = "IExpedition.use_consumable",
+        flags = ["A"]
+    );
     operation use_consumable(challenge_id: byte_array, consumable: Consumable.e_type) {
         val account = ft4.auth.authenticate();
         val player = Player.get_by_account(account);
@@ -21,15 +31,39 @@ namespace IExpedition {
         Expedition.use_consumbale(challenge, consumable);
     }
 
-    operation drop_consumable(challenge_id: byte_array, consumable: Consumable.e_type) {
+    @extend(ft4.auth.auth_handler)
+    function () = ft4.auth.add_auth_handler(
+        scope = "IExpedition.drop_consumable",
+        flags = ["A"]
+    );
+    operation drop_consumable(expedition_id: byte_array, consumable: Consumable.e_type) {
         val account = ft4.auth.authenticate();
         val player = Player.get_by_account(account);
 
-        var challenge = Challenge.get(challenge_id);
-        require(challenge.expedition.player == player);
-        Expedition.drop_consumbale(challenge, consumable);
+        var expedition = Expedition.get(expedition_id);
+        require(expedition.player == player);
+        Expedition.drop_consumbale(expedition, consumable);
     }
 
+    @extend(ft4.auth.auth_handler)
+    function () = ft4.auth.add_auth_handler(
+        scope = "IExpedition.drop_loot",
+        flags = ["A"]
+    );
+    operation drop_loot(expedition_id: byte_array, artifact: name) {
+        val account = ft4.auth.authenticate();
+        val player = Player.get_by_account(account);
+
+        var expedition = Expedition.get(expedition_id);
+        require(expedition.player == player);
+        Expedition.drop_loot(expedition, artifact);
+    }
+
+    @extend(ft4.auth.auth_handler)
+    function () = ft4.auth.add_auth_handler(
+        scope = "IExpedition.advance",
+        flags = ["A"]
+    );
     operation advance(challenge_id: byte_array, action: Challenge.e_action) {
         val account = ft4.auth.authenticate();
         val player = Player.get_by_account(account);
@@ -39,7 +73,12 @@ namespace IExpedition {
         Challenge.select_action(challenge, action);
     }
 
-    operation retreat(expedition_id: byte_array, action_id: integer) {
+    @extend(ft4.auth.auth_handler)
+    function () = ft4.auth.add_auth_handler(
+        scope = "IExpedition.retreat",
+        flags = ["A"]
+    );
+    operation retreat(expedition_id: byte_array) {
         val account = ft4.auth.authenticate();
         val player = Player.get_by_account(account);
 
@@ -48,6 +87,11 @@ namespace IExpedition {
         Challenge.retreat(expedition);
     }
 
+    @extend(ft4.auth.auth_handler)
+    function () = ft4.auth.add_auth_handler(
+        scope = "IExpedition.finish",
+        flags = ["A"]
+    );
     operation finish(expedition_id: byte_array) {
         val account = ft4.auth.authenticate();
         val player = Player.get_by_account(account);

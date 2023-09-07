@@ -13,13 +13,20 @@ namespace IExpedition {
         return Expedition.get_all_ongoing(player);
     }
 
+    query get_details(
+        expedition_id: byte_array
+    ) {
+        val expedition = Expedition.get(expedition_id);
+        return Expedition.get_definition(expedition);
+    }
+
     query get_result(
         challenge_id: byte_array
     ) {
         var challenge = Challenge.get(challenge_id);
         return (
             current = Challenge.get_definition(challenge),
-            next = Challenge.__def @* {.level == challenge.level + 1} (Challenge.get_definition($))
+            next = Challenge.__def @* {.level == challenge.level + 1} (Challenge.get_overview($))
         );
     }
 }

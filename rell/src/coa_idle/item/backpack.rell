@@ -1,5 +1,14 @@
 namespace Backpack {
     function name(Hero.e_rarity) = "backpack_" + e_rarity.name;
+    function get(name) {
+        val split = name.split("_");
+        val rarity = Hero.e_rarity.value(split[1]);
+        return (
+            rarity = rarity,
+            consumable = CONSUMABLE_SPACE()[rarity],
+            loot = LOOT_SPACE()[rarity]
+        );
+    }
 
     function CONSUMABLE_SPACE() = map<Hero.e_rarity, integer>([
         Hero.e_rarity.common: 3,
@@ -16,11 +25,4 @@ namespace Backpack {
         Hero.e_rarity.magical: 4,
         Hero.e_rarity.legendary: 5
     ]);
-
-    function get_space(Hero.e_rarity) {
-        return (
-            consumable = CONSUMABLE_SPACE()[e_rarity],
-            loot = LOOT_SPACE()[e_rarity]
-        );
-    }
 }

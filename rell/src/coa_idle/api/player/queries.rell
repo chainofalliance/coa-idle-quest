@@ -1,16 +1,31 @@
 namespace IPlayer {
-    query get_login_data(
-        account_id: byte_array,
-        local_version: integer,
-        timestamp
-    ) {
+    query get_heroes(account_id: byte_array) {
         val player = Player.get_by_account_id(account_id);
-        return (
-            player_data = Player.get_login_data(player, timestamp)
+        return PlayerHero.get_heroes(player) @* {} (Hero.get_overview($));
+    }
+
+    query get_backpacks(account_id: byte_array) {
+        val player = Player.get_by_account_id(account_id);
+        return PlayerInventory.__def @* {player, .item.starts_with("backpack")} (
+            .item,
+            .amount
+        );
+    }
+
+    query get_consumables(account_id: byte_array) {
+        val player = Player.get_by_account_id(account_id);
+        return PlayerInventory.__def @* {player, not .item.starts_with("backpack")} (
+            Consumable.e_type.value(.item),
+            .amount
         );
     }
 
     query does_exist(account_id: byte_array) {
         return Player.does_exist(account_id);
+    }
+
+    query get_shards(account_id: byte_array) {
+        val player = Player.get_by_account_id(account_id);
+        return player.shards;
     }
 }

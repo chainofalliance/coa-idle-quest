@@ -25,22 +25,34 @@ namespace HeroShop {
     }
 
     function buy(player: Player.__def, id: byte_array, name) {
+        val was_starting = PlayerHero.get_heroes(player).size() < 3;
         var (hero, price) = __def @ {player, .hero_id == id} (struct<mutable Hero.__def>.from_bytes(.hero), .price);
         hero.name = name;
         Player.deduct(player, price);
         Hero.construct(player, hero);
+        val is_starting = PlayerHero.get_heroes(player).size() < 3;
+        if (was_starting and not is_starting) {
+            refresh(player);
+        } else {
+            delete __def @ {.hero_id == id, player};
+            _refresh(player, 1, true);
+        }
     }
 
     function refresh(player: Player.__def) {
+        delete __def @* {player};
+        _refresh(player, SELECTION_PER_PLAYER, false);
+    }
+
+    function _refresh(player: Player.__def, amount: integer, free: boolean) {
         val is_starting = PlayerHero.get_heroes(player).size() < 3;
-        if (not is_starting)
+        if (not (is_starting or free))
             Player.deduct(player, REFRESH_COST);
 
         val max_rarity = Hero.e_rarity.value(min(Hero.e_rarity.legendary.value, PlayerHero.get_highest_rarity(player).value + 1));
-        delete __def @* {player};
-        for (i in range(SELECTION_PER_PLAYER)) {
-            val rarity = Hero.get_random_rarity(max_rarity);
-            val hero = if (is_starting) Hero.get_with_rarity(Hero.e_rarity.common) else Hero.get_with_rarity(rarity);
+        for (i in range(amount)) {
+            val rarity = if (is_starting) Hero.e_rarity.common else Hero.get_random_rarity(max_rarity);
+            val hero =  Hero.get_with_rarity(rarity);
             val price = if (is_starting) 0 else PRICE_MAP()[hero.e_rarity];
             create __def (player, hero_id=hero.id, hero=hero.to_bytes(), price);
         }
@@ -63,16 +75,16 @@ namespace ConsumableShop {
 }
 
 namespace BackpackShop {
-    function PRICE_MAP() = map<Hero.e_rarity, integer>([
-        Hero.e_rarity.uncommon: 150,
-        Hero.e_rarity.rare: 200,
-        Hero.e_rarity.magical: 250,
-        Hero.e_rarity.legendary: 500
+    function PRICE_MAP() = map<name, integer>([
+        Backpack.name(Hero.e_rarity.uncommon): 150,
+        Backpack.name(Hero.e_rarity.rare): 200,
+        Backpack.name(Hero.e_rarity.magical): 250,
+        Backpack.name(Hero.e_rarity.legendary): 500
     ]);
 
-    function buy(player: Player.__def, backpack: Hero.e_rarity) {
+    function buy(player: Player.__def, backpack: name) {
         val price = PRICE_MAP()[backpack];
         Player.deduct(player, price);
-        PlayerInventory.give(player, Backpack.name(backpack), 1);
+        PlayerInventory.give(player, backpack, 1);
     }
 }

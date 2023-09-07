@@ -1,4 +1,9 @@
 namespace IShop {
+    @extend(ft4.auth.auth_handler)
+    function () = ft4.auth.add_auth_handler(
+        scope = "IShop.refresh",
+        flags = ["A"]
+    );
     operation refresh() {
         val account = ft4.auth.authenticate();
         val player = Player.get_by_account(account);
@@ -6,6 +11,11 @@ namespace IShop {
         HeroShop.refresh(player);
     }
     
+    @extend(ft4.auth.auth_handler)
+    function () = ft4.auth.add_auth_handler(
+        scope = "IShop.buy_hero",
+        flags = ["A"]
+    );
     operation buy_hero(hero_id: byte_array, name) {
         val account = ft4.auth.authenticate();
         val player = Player.get_by_account(account);
@@ -13,6 +23,11 @@ namespace IShop {
         HeroShop.buy(player, hero_id, name);
     }
     
+    @extend(ft4.auth.auth_handler)
+    function () = ft4.auth.add_auth_handler(
+        scope = "IShop.buy_consumable",
+        flags = ["A"]
+    );
     operation buy_consumable(Consumable.e_type) {
         val account = ft4.auth.authenticate();
         val player = Player.get_by_account(account);
@@ -20,10 +35,15 @@ namespace IShop {
         ConsumableShop.buy(player, e_type);
     }
     
-    operation buy_backpack(Hero.e_rarity) {
+    @extend(ft4.auth.auth_handler)
+    function () = ft4.auth.add_auth_handler(
+        scope = "IShop.buy_backpack",
+        flags = ["A"]
+    );
+    operation buy_backpack(name) {
         val account = ft4.auth.authenticate();
         val player = Player.get_by_account(account);
-        
-        BackpackShop.buy(player, e_rarity);
+
+        BackpackShop.buy(player, name);
     }
 }

@@ -46,6 +46,17 @@ namespace Hero {
     function get_all(hero_ids: list<byte_array>) {
         return __def @* {.id in hero_ids};
     }
+    
+    function get_overview(hero: __def) {
+        return (
+            id = hero.id,
+            name = hero.name,
+            rarity = hero.e_rarity,
+            classs = hero.e_class,
+            species = hero.e_species,
+            health = hero.health
+        );
+    }
 
     function get_health(rarity: e_rarity, classs: e_class) {
         val base = map<e_class, integer>([

@@ -102,7 +102,8 @@ namespace Challenge {
             level = challenge.level,
             type = challenge.e_type,
             difficulty = challenge.e_difficulty,
-            terrain = challenge.e_terrain
+            terrain = challenge.e_terrain,
+            class_advantage = challenge.class_advantage
         );
     }
 
@@ -113,6 +114,7 @@ namespace Challenge {
             type = challenge.e_type,
             difficulty = challenge.e_difficulty,
             terrain = challenge.e_terrain,
+            class_advantage = challenge.class_advantage,
             states = get_states_definition(challenge),
             outcome = get_outcome_definition(challenge),
             loot = ChallengeLoot.get_definition(challenge)
@@ -127,14 +129,16 @@ namespace Challenge {
             type = .e_type,
             difficulty = .e_difficulty,
             terrain = .e_terrain,
+            class_advantage = .class_advantage,
             states = get_states_definition(c),
-            outcome = get_outcome_definition(c)
+            outcome = get_outcome_definition(c),
+            loot = ChallengeLoot.get_definition(c)
         );
     }
 
     function get_states_definition(challenge: __def) {
         return state @* {challenge} (
-            state = .state.name,
+            state = .state,
             @sort_desc created_at = .created_at
         );
     }
@@ -510,7 +514,7 @@ namespace ChallengeLoot {
         // TODO multiplied by level and danger
         construct(challenge, "shards", e_type.shards, amount);
 
-        val spaces = Backpack.get_space(challenge.expedition.backpack_rarity);
+        val spaces = Backpack.get(challenge.expedition.backpack_name);
         var consumable_space = ExpeditionConsumables.__def @ {challenge.expedition} (@sum 1);
         var loot_space = __def @ {challenge, e_type.artifact} (@sum 1);
 
@@ -573,6 +577,12 @@ namespace ChallengeLoot {
             rest_amount += shard.amount/2;
         }
         construct(challenge, "shards", e_type.shards, rest_amount);
+    }
+
+    function drop(expedition: Expedition.__def, artifact: name) {
+        val item = __def @? {.challenge.expedition == expedition, e_type.artifact};
+        require(item);
+        item.state = e_state.dropped;
     }
 
     // +++++++++++++++++

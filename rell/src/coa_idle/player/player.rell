@@ -22,13 +22,6 @@ namespace Player {
         return __def @? {.account.id == account_id} != null;
     }
 
-    function get_login_data(player: __def, timestamp) {
-        return (
-            shards = player.shards,
-            expeditions = Expedition.get_all_ongoing(player)
-        );
-    }    
-
     function deduct(player: Player.__def, shards: integer) {
         require(shards >= 0);
         require(player.shards >= shards);
@@ -56,7 +49,8 @@ namespace PlayerHero {
     }
 
     function get_highest_rarity(player: Player.__def) {
-        return __def @ {player} (@omit @sort_desc .hero.e_rarity.value, .hero.e_rarity) limit 1;
+        val rarity = __def @? {player} (@omit @sort_desc .hero.e_rarity.value, .hero.e_rarity) limit 1;
+        return if (rarity??) rarity else Hero.e_rarity.common;
     }
 }
 
