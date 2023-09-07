@@ -1,35 +1,40 @@
 namespace Consumable {
     enum e_type {
-        health_potion_s,
-        health_potion_m,
-        health_potion_l,
-        single_health_potion_s,
-        single_health_potion_m,
-        single_health_potion_l,
-        strength_potion_s,
-        strength_potion_m,
-        strength_potion_l,
+        heal_single_small,
+        heal_single_full,
+        heal_party_s,
+        heal_party_m,
+        heal_party_f,
+        protect_s,
+        protect_l,
+        evade_encounter,
+        changeling, // TODO what do?
+        hustle, // TODO what do?
         max,
     }
 
     function use(consumable: e_type, challenge: Challenge.__def) {
-        val effect = EFFECT_MAPPING()[consumable];
-        if (consumable.name.starts_with("health_potion")) {
-            update ExpeditionParty.__def @* {challenge.expedition} (.health = min(.health + effect, .hero.health));
-        } else if (consumable.name.starts_with("single_health_potion")) {
-            // TODO heal the one with lowest health
-            update ExpeditionParty.__def @* {challenge.expedition} (.health = min(.health + effect, .hero.health));
+        val effect = 1 + (EFFECT_MAPPING()[consumable] / 100.0);
+        if (consumable.name.starts_with("heal_party")) {
+            update ExpeditionParty.__def @* {challenge.expedition} (.health = min((.health * effect).to_integer(), .hero.health));
+        } else if (consumable.name.starts_with("heal_single")) {
+            val lowest = ExpeditionParty.__def @ {challenge.expedition} (@omit @sort .health, $) limit 1;
+            lowest.health = min((lowest.health * effect).to_integer(), lowest.hero.health);
         } else {
             create Challenge.effect (challenge, consumable); 
         }
     }
 
     function EFFECT_MAPPING() = map<e_type, integer>([
-        e_type.health_potion_s: 30,
-        e_type.health_potion_m: 60,
-        e_type.health_potion_l: 120,
-        e_type.strength_potion_s: 5,
-        e_type.strength_potion_m: 10,
-        e_type.strength_potion_l: 15
+        e_type.heal_single_small: 50,
+        e_type.heal_single_full: 00,
+        e_type.heal_party_s: 30,
+        e_type.heal_party_m: 60,
+        e_type.heal_party_f: 100,
+        e_type.protect_s: 15,
+        e_type.protect_l: 35,
+        e_type.evade_encounter: 20,
+        e_type.changeling: 25,
+        e_type.hustle: 10
     ]);
 }

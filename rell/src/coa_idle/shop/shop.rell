@@ -61,10 +61,14 @@ namespace HeroShop {
 
 namespace ConsumableShop {
     function PRICE_MAP() = map<Consumable.e_type, integer>([
-        Consumable.e_type.health_potion_s: 100,
-        Consumable.e_type.health_potion_m: 150,
-        Consumable.e_type.strength_potion_s: 250,
-        Consumable.e_type.strength_potion_m: 500
+        Consumable.e_type.heal_single_small: 15,
+        Consumable.e_type.heal_single_full: 60,
+        Consumable.e_type.heal_party_s: 25,
+        Consumable.e_type.heal_party_m: 100,
+        Consumable.e_type.protect_s: 50,
+        Consumable.e_type.protect_l: 200,
+        Consumable.e_type.evade_encounter: 15,
+        Consumable.e_type.hustle: 50
     ]);
 
     function buy(player: Player.__def, consumable: Consumable.e_type) {

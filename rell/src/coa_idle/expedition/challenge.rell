@@ -204,7 +204,7 @@ namespace Challenge {
         val effects = effect @* {challenge};
         for (effect in effects) {
             val e = Consumable.EFFECT_MAPPING()[effect.consumable];
-            if (effect.consumable.name.starts_with("strength_potion")) {
+            if (effect.consumable.name.starts_with("protect")) {
                 chance += e;
             }
         }
@@ -242,6 +242,14 @@ namespace Challenge {
     function skip(challenge: __def) {
         set_skipped(challenge);
         var chance = CHALLENGE_SUCCESS_CHANCE()[challenge.e_difficulty];
+        val effects = effect @* {challenge};
+        for (effect in effects) {
+            val e = Consumable.EFFECT_MAPPING()[effect.consumable];
+            if (effect.consumable == Consumable.e_type.evade_encounter) {
+                chance += e;
+            }
+        }
+
         var rnd = Random.next_integer(100) + 1;
         if (rnd > chance)
             resolve(challenge, chance - BYPASS_MALUS);
@@ -406,66 +414,6 @@ namespace Challenge {
         e_difficulty.normal,
         e_difficulty.hard,
         e_difficulty.boss
-        // Expedition.e_danger_level.neglible: [
-        //     e_difficulty.normal,
-        //     e_difficulty.normal,
-        //     e_difficulty.normal,
-        //     e_difficulty.normal,
-        //     e_difficulty.hard,
-        //     e_difficulty.normal,
-        //     e_difficulty.normal,
-        //     e_difficulty.normal,
-        //     e_difficulty.normal,
-        //     e_difficulty.boss
-        // ],
-        // Expedition.e_danger_level.harmless: [
-        //     e_difficulty.normal,
-        //     e_difficulty.normal,
-        //     e_difficulty.normal,
-        //     e_difficulty.normal,
-        //     e_difficulty.hard,
-        //     e_difficulty.normal,
-        //     e_difficulty.normal,
-        //     e_difficulty.normal,
-        //     e_difficulty.normal,
-        //     e_difficulty.boss
-        // ],
-        // Expedition.e_danger_level.unhealthy: [
-        //     e_difficulty.normal,
-        //     e_difficulty.normal,
-        //     e_difficulty.normal,
-        //     e_difficulty.hard,
-        //     e_difficulty.normal,
-        //     e_difficulty.normal,
-        //     e_difficulty.hard,
-        //     e_difficulty.normal,
-        //     e_difficulty.hard,
-        //     e_difficulty.boss
-        // ],
-        // Expedition.e_danger_level.interesting: [
-        //     e_difficulty.normal,
-        //     e_difficulty.normal,
-        //     e_difficulty.normal,
-        //     e_difficulty.hard,
-        //     e_difficulty.normal,
-        //     e_difficulty.normal,
-        //     e_difficulty.hard,
-        //     e_difficulty.normal,
-        //     e_difficulty.hard,
-        //     e_difficulty.boss
-        // ],
-        // Expedition.e_danger_level.seriously: [
-        //     e_difficulty.normal,
-        //     e_difficulty.normal,
-        //     e_difficulty.hard,
-        //     e_difficulty.normal,
-        //     e_difficulty.hard,
-        //     e_difficulty.normal,
-        //     e_difficulty.hard,
-        //     e_difficulty.hard,
-        //     e_difficulty.hard,
-        //     e_difficulty.boss
-        // ]
     ]);
     // +++++++++++++++++
 }
@@ -510,9 +458,10 @@ namespace ChallengeLoot {
     }
 
     function create_random(challenge: Challenge.__def) {
-        var amount = SHARD_REWARDS()[challenge.e_difficulty];
-        // TODO multiplied by level and danger
-        construct(challenge, "shards", e_type.shards, amount);
+        val shards_base = SHARD_REWARDS_BASE()[challenge.expedition.e_danger_level];
+        val shards_step = SHARD_REWARDS_STEP()[challenge.expedition.e_danger_level];
+        val shards = shards_base + challenge.level + shards_step + challenge.e_difficulty.value;
+        construct(challenge, "shards", e_type.shards, shards);
 
         val spaces = Backpack.get(challenge.expedition.backpack_name);
         var consumable_space = ExpeditionConsumables.__def @ {challenge.expedition} (@sum 1);
@@ -524,9 +473,12 @@ namespace ChallengeLoot {
     function drop_consumables(challenge: Challenge.__def, space: integer, filled: integer) {
         val chance_map = CONSUMALBE_REWARD_CHANCE()[challenge.e_difficulty];
         for (i in range(MAX_ROLLS)) {
+            if (chance_map[i] == 0)
+                continue;
+
             val rnd = Random.next_integer(100) + 1;
             if (rnd > chance_map[i]) {
-                val consumable = CONSUMALBE_DROP_POOL()[Random.next_integer(CONSUMALBE_DROP_POOL().size())];
+                val consumable = Consumable.e_type.value(Random.next_integer(Consumable.e_type.max.value));
                 val e = construct(challenge, consumable.name, e_type.consumable, 1);
                 if (filled < space) {
                     ExpeditionConsumables.construct(challenge.expedition, consumable);
@@ -541,13 +493,18 @@ namespace ChallengeLoot {
     function drop_loot(challenge: Challenge.__def, space: integer, filled: integer) {
         val chance_map = LOOT_REWARD_CHANCE()[challenge.e_difficulty];        
         for (i in range(MAX_ROLLS)) {
+            if (chance_map[i] == 0)
+                continue;
+
             val rnd = Random.next_integer(100) + 1;
             if (rnd > chance_map[i]) {
-                val consumable = CONSUMALBE_DROP_POOL()[Random.next_integer(CONSUMALBE_DROP_POOL().size())];
+                val size = if (challenge.e_difficulty == Challenge.e_difficulty.boss) 
+                        Artifact.e_size.big 
+                    else 
+                        Artifact.e_size.value(Random.next_integer(Artifact.e_size.max.value));
+                val artifact = Artifact.name(size, challenge.expedition.e_danger_level);
 
-                // TODO define how and which artifact to drop
-
-                val e = construct(challenge, consumable.name, e_type.artifact, 1);
+                val e = construct(challenge, artifact, e_type.artifact, 1);
                 if (filled < space) {
                     e.state = e_state.dropped;
                 }
@@ -559,24 +516,24 @@ namespace ChallengeLoot {
         val shards = __def @ {.challenge.expedition == expedition, .e_type == e_type.shards, .state == e_state.open} (@sum .amount);
         Player.give_shards(expedition.player, shards);
 
-        val rest =  __def @* {.challenge.expedition == expedition, .e_type != e_type.shards, .state == e_state.open};
-        for (item in rest) {
+        val artifacts =  __def @* {.challenge.expedition == expedition, .e_type == e_type.artifact, .state == e_state.open};
+        for (item in artifacts) {
             val artifact = Artifact.get(item.name);
             Player.give_shards(expedition.player, artifact.price);
         }
 
-        update __def @* {.challenge.expedition == expedition, .state != e_state.open} (.state = e_state.claimed);
+        update __def @* {.challenge.expedition == expedition, .state == e_state.open} (.state = e_state.claimed);
     }
 
     function on_wipe(challenge: Challenge.__def) {
         update __def @* {.challenge.expedition == challenge.expedition, .e_type != e_type.shards, .state == e_state.open} (.state = e_state.lost);
         var shards = __def @* {.challenge.expedition == challenge.expedition, .e_type == e_type.shards, .state == e_state.open};
-        var rest_amount = 0;
         for (shard in shards) {
-            shard.state = e_state.lost;
-            rest_amount += shard.amount/2;
+            val lost = shard.amount/2;
+            construct(shard.challenge, "shards", e_type.shards, lost).state = e_state.lost;
+            construct(shard.challenge, "shards", e_type.shards, shard.amount - lost);
+            delete shard;
         }
-        construct(challenge, "shards", e_type.shards, rest_amount);
     }
 
     function drop(expedition: Expedition.__def, artifact: name) {
@@ -601,16 +558,21 @@ namespace ChallengeLoot {
         Challenge.e_difficulty.hard: [25, 0],
         Challenge.e_difficulty.boss: [100, 0]
     ]);
-
-    function CONSUMALBE_DROP_POOL() = list<Consumable.e_type>([
-        Consumable.e_type.health_potion_l
-        // TODO fill the rest
+    
+    function SHARD_REWARDS_BASE() = map<Expedition.e_danger_level, integer>([
+        Expedition.e_danger_level.neglible: 5,
+        Expedition.e_danger_level.harmless: 10,
+        Expedition.e_danger_level.unhealthy: 20,
+        Expedition.e_danger_level.interesting: 40,
+        Expedition.e_danger_level.seriously: 100
     ]);
     
-    function SHARD_REWARDS() = map<Challenge.e_difficulty, integer>([
-        Challenge.e_difficulty.normal: 50,
-        Challenge.e_difficulty.hard: 200,
-        Challenge.e_difficulty.boss: 1000
+    function SHARD_REWARDS_STEP() = map<Expedition.e_danger_level, integer>([
+        Expedition.e_danger_level.neglible: 2,
+        Expedition.e_danger_level.harmless: 4,
+        Expedition.e_danger_level.unhealthy: 8,
+        Expedition.e_danger_level.interesting: 16,
+        Expedition.e_danger_level.seriously: 32
     ]);
 
     function LOOT_RARITY_CHANCE() = map<Hero.e_rarity, integer>([

@@ -1,43 +1,52 @@
 namespace Artifact {
     enum e_size {
-        small,
+        small_1,
+        small_2,
         medium,
-        big
+        big,
+        max
     }
 
-    function name(e_size, Hero.e_rarity, i: integer) = "artifact_%s_%s_%s".format(e_rarity.name, e_size, i);
+    function name(e_size, Expedition.e_danger_level) = "artifact_%s_%s".format(e_danger_level.name, e_size);
 
     function get(name) {
         val split = name.split("_");
         return (
-            rarity = Hero.e_rarity.value(split[1]),
+            rarity = Expedition.e_danger_level.value(split[1]),
             size = e_size.value(split[2]),
             id = integer(split[3]),
-            price = SELL_PRICE()[e_size.value(split[2])][Hero.e_rarity.value(split[1])]
+            price = SELL_PRICE()[e_size.value(split[2])][Expedition.e_danger_level.value(split[1])]
         );
     }
 
-    function SELL_PRICE() = map<e_size, map<Hero.e_rarity, integer>>([
-        e_size.small: [
-            Hero.e_rarity.common: 3,
-            Hero.e_rarity.uncommon: 4,
-            Hero.e_rarity.rare: 6,
-            Hero.e_rarity.magical: 8,
-            Hero.e_rarity.legendary: 10
+    function SELL_PRICE() = map<e_size, map<Expedition.e_danger_level, integer>>([
+        e_size.small_1: [
+            Expedition.e_danger_level.neglible: 60,
+            Expedition.e_danger_level.harmless: 120,
+            Expedition.e_danger_level.unhealthy: 225,
+            Expedition.e_danger_level.interesting: 450,
+            Expedition.e_danger_level.seriously: 900
+        ],
+        e_size.small_2: [
+            Expedition.e_danger_level.neglible: 60,
+            Expedition.e_danger_level.harmless: 120,
+            Expedition.e_danger_level.unhealthy: 225,
+            Expedition.e_danger_level.interesting: 450,
+            Expedition.e_danger_level.seriously: 900
         ],
         e_size.medium: [
-            Hero.e_rarity.common: 3,
-            Hero.e_rarity.uncommon: 4,
-            Hero.e_rarity.rare: 6,
-            Hero.e_rarity.magical: 8,
-            Hero.e_rarity.legendary: 10
+            Expedition.e_danger_level.neglible: 90,
+            Expedition.e_danger_level.harmless: 180,
+            Expedition.e_danger_level.unhealthy: 350,
+            Expedition.e_danger_level.interesting: 700,
+            Expedition.e_danger_level.seriously: 1400
         ],
         e_size.big: [
-            Hero.e_rarity.common: 3,
-            Hero.e_rarity.uncommon: 4,
-            Hero.e_rarity.rare: 6,
-            Hero.e_rarity.magical: 8,
-            Hero.e_rarity.legendary: 10
+            Expedition.e_danger_level.neglible: 120,
+            Expedition.e_danger_level.harmless: 250,
+            Expedition.e_danger_level.unhealthy: 500,
+            Expedition.e_danger_level.interesting: 1000,
+            Expedition.e_danger_level.seriously: 2000
         ]
     ]);
 }
