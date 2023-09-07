@@ -7,11 +7,37 @@ namespace Artifact {
 
     function name(e_size, Hero.e_rarity, i: integer) = "artifact_%s_%s_%s".format(e_rarity.name, e_size, i);
 
-    function SELL_PRICE() = map<Hero.e_rarity, integer>([
-        Hero.e_rarity.common: 3,
-        Hero.e_rarity.uncommon: 4,
-        Hero.e_rarity.rare: 6,
-        Hero.e_rarity.magical: 8,
-        Hero.e_rarity.legendary: 10
+    function get(name) {
+        val split = name.split("_");
+        return (
+            rarity = Hero.e_rarity.value(split[1]),
+            size = e_size.value(split[2]),
+            id = integer(split[3]),
+            price = SELL_PRICE()[e_size.value(split[2])][Hero.e_rarity.value(split[1])]
+        );
+    }
+
+    function SELL_PRICE() = map<e_size, map<Hero.e_rarity, integer>>([
+        e_size.small: [
+            Hero.e_rarity.common: 3,
+            Hero.e_rarity.uncommon: 4,
+            Hero.e_rarity.rare: 6,
+            Hero.e_rarity.magical: 8,
+            Hero.e_rarity.legendary: 10
+        ],
+        e_size.medium: [
+            Hero.e_rarity.common: 3,
+            Hero.e_rarity.uncommon: 4,
+            Hero.e_rarity.rare: 6,
+            Hero.e_rarity.magical: 8,
+            Hero.e_rarity.legendary: 10
+        ],
+        e_size.big: [
+            Hero.e_rarity.common: 3,
+            Hero.e_rarity.uncommon: 4,
+            Hero.e_rarity.rare: 6,
+            Hero.e_rarity.magical: 8,
+            Hero.e_rarity.legendary: 10
+        ]
     ]);
 }

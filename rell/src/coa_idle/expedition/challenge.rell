@@ -178,8 +178,14 @@ namespace Challenge {
             e_action.skip -> skip(challenge);
         }
 
-        if (not is_party_wiped(challenge))
+        if (not ExpeditionParty.is_wiped(challenge.expedition)) {
             next(challenge.expedition, challenge.level);
+        } else {
+            set_perished(challenge);            
+            ChallengeLoot.on_wipe(challenge);
+            ExpeditionConsumables.on_wipe(challenge.expedition);
+            create cancel (challenge.expedition, now());
+        }
     }
 
     function resolve(challenge: __def, chance_in: integer? = null) {
@@ -236,23 +242,6 @@ namespace Challenge {
         if (rnd > chance)
             resolve(challenge, chance - BYPASS_MALUS);
     }
-
-    function is_party_wiped(challenge: __def) {
-        var party = ExpeditionParty.get(challenge.expedition);
-
-        var is_dead = false;
-        for (member in party)
-            is_dead = is_dead or member.health > 0;
-
-        if (is_dead) {
-            set_perished(challenge);            
-            ChallengeLoot.on_wipe(challenge.expedition);
-            ExpeditionConsumables.on_wipe(challenge.expedition);
-            create cancel (challenge.expedition, now());
-        }
-
-        return is_dead;
-    }
     
     function next(
         expedition: Expedition.__def,
@@ -270,7 +259,7 @@ namespace Challenge {
                 new_level,
                 random_type(),
                 terrain,
-                DIFFICULTY_MAP()[expedition.e_danger_level][new_level],
+                DIFFICULTY_MAP()[new_level],
                 Hero.get_random_class(),
                 expedition
             );
@@ -364,12 +353,6 @@ namespace Challenge {
         e_type.fight: 100,
         e_type.check: 100
     ]);
-    
-    function ACTION_CHANCE() = list<integer>([
-        100,
-        50,
-        5
-    ]);
 
     function SPECIES_FAVOR() = map<e_terrain, Hero.e_species>([
         e_terrain.village: Hero.e_species.human,
@@ -408,67 +391,77 @@ namespace Challenge {
         ]
     ]);
     
-    function DIFFICULTY_MAP() = map<Expedition.e_danger_level, list<e_difficulty>>([
-        Expedition.e_danger_level.neglible: [
-            e_difficulty.normal,
-            e_difficulty.normal,
-            e_difficulty.normal,
-            e_difficulty.normal,
-            e_difficulty.hard,
-            e_difficulty.normal,
-            e_difficulty.normal,
-            e_difficulty.normal,
-            e_difficulty.normal,
-            e_difficulty.boss
-        ],
-        Expedition.e_danger_level.harmless: [
-            e_difficulty.normal,
-            e_difficulty.normal,
-            e_difficulty.normal,
-            e_difficulty.normal,
-            e_difficulty.hard,
-            e_difficulty.normal,
-            e_difficulty.normal,
-            e_difficulty.normal,
-            e_difficulty.normal,
-            e_difficulty.boss
-        ],
-        Expedition.e_danger_level.unhealthy: [
-            e_difficulty.normal,
-            e_difficulty.normal,
-            e_difficulty.normal,
-            e_difficulty.hard,
-            e_difficulty.normal,
-            e_difficulty.normal,
-            e_difficulty.hard,
-            e_difficulty.normal,
-            e_difficulty.hard,
-            e_difficulty.boss
-        ],
-        Expedition.e_danger_level.interesting: [
-            e_difficulty.normal,
-            e_difficulty.normal,
-            e_difficulty.normal,
-            e_difficulty.hard,
-            e_difficulty.normal,
-            e_difficulty.normal,
-            e_difficulty.hard,
-            e_difficulty.normal,
-            e_difficulty.hard,
-            e_difficulty.boss
-        ],
-        Expedition.e_danger_level.seriously: [
-            e_difficulty.normal,
-            e_difficulty.normal,
-            e_difficulty.hard,
-            e_difficulty.normal,
-            e_difficulty.hard,
-            e_difficulty.normal,
-            e_difficulty.hard,
-            e_difficulty.hard,
-            e_difficulty.hard,
-            e_difficulty.boss
-        ]
+    function DIFFICULTY_MAP() = list<e_difficulty>([
+        e_difficulty.normal,
+        e_difficulty.normal,
+        e_difficulty.normal,
+        e_difficulty.hard,
+        e_difficulty.normal,
+        e_difficulty.normal,
+        e_difficulty.hard,
+        e_difficulty.normal,
+        e_difficulty.hard,
+        e_difficulty.boss
+        // Expedition.e_danger_level.neglible: [
+        //     e_difficulty.normal,
+        //     e_difficulty.normal,
+        //     e_difficulty.normal,
+        //     e_difficulty.normal,
+        //     e_difficulty.hard,
+        //     e_difficulty.normal,
+        //     e_difficulty.normal,
+        //     e_difficulty.normal,
+        //     e_difficulty.normal,
+        //     e_difficulty.boss
+        // ],
+        // Expedition.e_danger_level.harmless: [
+        //     e_difficulty.normal,
+        //     e_difficulty.normal,
+        //     e_difficulty.normal,
+        //     e_difficulty.normal,
+        //     e_difficulty.hard,
+        //     e_difficulty.normal,
+        //     e_difficulty.normal,
+        //     e_difficulty.normal,
+        //     e_difficulty.normal,
+        //     e_difficulty.boss
+        // ],
+        // Expedition.e_danger_level.unhealthy: [
+        //     e_difficulty.normal,
+        //     e_difficulty.normal,
+        //     e_difficulty.normal,
+        //     e_difficulty.hard,
+        //     e_difficulty.normal,
+        //     e_difficulty.normal,
+        //     e_difficulty.hard,
+        //     e_difficulty.normal,
+        //     e_difficulty.hard,
+        //     e_difficulty.boss
+        // ],
+        // Expedition.e_danger_level.interesting: [
+        //     e_difficulty.normal,
+        //     e_difficulty.normal,
+        //     e_difficulty.normal,
+        //     e_difficulty.hard,
+        //     e_difficulty.normal,
+        //     e_difficulty.normal,
+        //     e_difficulty.hard,
+        //     e_difficulty.normal,
+        //     e_difficulty.hard,
+        //     e_difficulty.boss
+        // ],
+        // Expedition.e_danger_level.seriously: [
+        //     e_difficulty.normal,
+        //     e_difficulty.normal,
+        //     e_difficulty.hard,
+        //     e_difficulty.normal,
+        //     e_difficulty.hard,
+        //     e_difficulty.normal,
+        //     e_difficulty.hard,
+        //     e_difficulty.hard,
+        //     e_difficulty.hard,
+        //     e_difficulty.boss
+        // ]
     ]);
     // +++++++++++++++++
 }
@@ -492,7 +485,6 @@ namespace ChallengeLoot {
     enum e_type {
         artifact,
         consumable,
-        special, // TODO remove for now
         shards
     }
 
@@ -513,31 +505,47 @@ namespace ChallengeLoot {
         );
     }
 
-    // TODO after artifact definition
     function create_random(challenge: Challenge.__def) {
-        construct(challenge, "shards", e_type.shards, SHARD_REWARDS()[challenge.e_difficulty]);
+        var amount = SHARD_REWARDS()[challenge.e_difficulty];
+        // TODO multiplied by level and danger
+        construct(challenge, "shards", e_type.shards, amount);
 
         val spaces = Backpack.get_space(challenge.expedition.backpack_rarity);
         var consumable_space = ExpeditionConsumables.__def @ {challenge.expedition} (@sum 1);
-        var loot_space = __def @ {challenge, .e_type in [e_type.artifact, e_type.special]} (@sum 1);
+        var loot_space = __def @ {challenge, e_type.artifact} (@sum 1);
 
-        val reward_chance_map = REWARD_CHANCE()[challenge.e_difficulty];
+        drop_consumables(challenge, spaces.consumable, consumable_space);
+    }
+
+    function drop_consumables(challenge: Challenge.__def, space: integer, filled: integer) {
+        val chance_map = CONSUMALBE_REWARD_CHANCE()[challenge.e_difficulty];
         for (i in range(MAX_ROLLS)) {
             val rnd = Random.next_integer(100) + 1;
-            if (rnd > reward_chance_map[i]) {
-                val type = random_type(challenge.e_difficulty);
-                val e = construct(challenge, "TODO change me", type, 1);
-                if (type == e_type.consumable) {
-                    if (consumable_space < spaces.consumable) {
-                        ExpeditionConsumables.add_random(challenge.expedition);
-                        e.state = e_state.claimed;
-                    } else {
-                        e.state = e_state.dropped;
-                    }
+            if (rnd > chance_map[i]) {
+                val consumable = CONSUMALBE_DROP_POOL()[Random.next_integer(CONSUMALBE_DROP_POOL().size())];
+                val e = construct(challenge, consumable.name, e_type.consumable, 1);
+                if (filled < space) {
+                    ExpeditionConsumables.construct(challenge.expedition, consumable);
+                    e.state = e_state.claimed;
                 } else {
-                    if (loot_space < spaces.loot) {
-                        e.state = e_state.dropped;
-                    }
+                    e.state = e_state.dropped;
+                }
+            }
+        }
+    }
+
+    function drop_loot(challenge: Challenge.__def, space: integer, filled: integer) {
+        val chance_map = LOOT_REWARD_CHANCE()[challenge.e_difficulty];        
+        for (i in range(MAX_ROLLS)) {
+            val rnd = Random.next_integer(100) + 1;
+            if (rnd > chance_map[i]) {
+                val consumable = CONSUMALBE_DROP_POOL()[Random.next_integer(CONSUMALBE_DROP_POOL().size())];
+
+                // TODO define how and which artifact to drop
+
+                val e = construct(challenge, consumable.name, e_type.artifact, 1);
+                if (filled < space) {
+                    e.state = e_state.dropped;
                 }
             }
         }
@@ -549,74 +557,58 @@ namespace ChallengeLoot {
 
         val rest =  __def @* {.challenge.expedition == expedition, .e_type != e_type.shards, .state == e_state.open};
         for (item in rest) {
-            // TODO sell artifacts?
-            PlayerInventory.give(expedition.player, item.name, 1);
+            val artifact = Artifact.get(item.name);
+            Player.give_shards(expedition.player, artifact.price);
         }
 
         update __def @* {.challenge.expedition == expedition, .state != e_state.open} (.state = e_state.claimed);
     }
 
-    function on_wipe(expedition: Expedition.__def) {
-        update __def @* {.challenge.expedition == expedition, .e_type != e_type.shards, .state == e_state.open} (.state = e_state.lost);
-        var shards = __def @* {.challenge.expedition == expedition, .e_type == e_type.shards, .state == e_state.open};
+    function on_wipe(challenge: Challenge.__def) {
+        update __def @* {.challenge.expedition == challenge.expedition, .e_type != e_type.shards, .state == e_state.open} (.state = e_state.lost);
+        var shards = __def @* {.challenge.expedition == challenge.expedition, .e_type == e_type.shards, .state == e_state.open};
+        var rest_amount = 0;
         for (shard in shards) {
-            val lost = shard.amount/2;
-            construct(shard.challenge, "shards", e_type.shards, lost).state = e_state.lost;
-            construct(shard.challenge, "shards", e_type.shards, shard.amount - lost);
+            shard.state = e_state.lost;
+            rest_amount += shard.amount/2;
         }
-        delete shards;
-    }
-
-    function random_type(difficulty: Challenge.e_difficulty) {
-        val chances = REWARD_DISTRIBUTION()[difficulty];
-        val chances_max = chances @ {} (@sum $[1]);
-
-        var rnd = Random.next_integer(chances_max) + 1;
-        var idx = 0;
-        while (true) {
-            rnd -= chances[e_type.value(idx)];
-            if (rnd <= 0)
-                break;
-            else
-                idx++;
-        }
-
-        return e_type.value(idx);
+        construct(challenge, "shards", e_type.shards, rest_amount);
     }
 
     // +++++++++++++++++
     // GLOBALS
     // +++++++++++++++++
-    val MAX_ROLLS = 3;
+    val MAX_ROLLS = 2;
 
-    function REWARD_DISTRIBUTION() = map<Challenge.e_difficulty, map<e_type, integer>>([
-        Challenge.e_difficulty.normal: [
-            e_type.artifact: 100,
-            e_type.consumable: 150,
-            e_type.special: 200
-        ],
-        Challenge.e_difficulty.hard: [
-            e_type.artifact: 100,
-            e_type.consumable: 150,
-            e_type.special: 200
-        ],
-        Challenge.e_difficulty.boss: [
-            e_type.artifact: 100,
-            e_type.consumable: 150,
-            e_type.special: 200
-        ]
+    function LOOT_REWARD_CHANCE() = map<Challenge.e_difficulty, list<integer>>([
+        Challenge.e_difficulty.normal: [0, 0],
+        Challenge.e_difficulty.hard: [75, 0],
+        Challenge.e_difficulty.boss: [100, 50]
     ]);
 
-    function REWARD_CHANCE() = map<Challenge.e_difficulty, list<integer>>([
-        Challenge.e_difficulty.normal: [100, 50, 25],
-        Challenge.e_difficulty.hard: [100, 75 , 50],
-        Challenge.e_difficulty.boss: [100, 100, 75]
+    function CONSUMALBE_REWARD_CHANCE() = map<Challenge.e_difficulty, list<integer>>([
+        Challenge.e_difficulty.normal: [10, 0],
+        Challenge.e_difficulty.hard: [25, 0],
+        Challenge.e_difficulty.boss: [100, 0]
+    ]);
+
+    function CONSUMALBE_DROP_POOL() = list<Consumable.e_type>([
+        Consumable.e_type.health_potion_l
+        // TODO fill the rest
     ]);
     
     function SHARD_REWARDS() = map<Challenge.e_difficulty, integer>([
         Challenge.e_difficulty.normal: 50,
         Challenge.e_difficulty.hard: 200,
         Challenge.e_difficulty.boss: 1000
+    ]);
+
+    function LOOT_RARITY_CHANCE() = map<Hero.e_rarity, integer>([
+        Hero.e_rarity.common: 10,
+        Hero.e_rarity.uncommon: 25,
+        Hero.e_rarity.rare: 35,
+        Hero.e_rarity.magical: 75,
+        Hero.e_rarity.legendary: 100
     ]);
     // +++++++++++++++++
 }

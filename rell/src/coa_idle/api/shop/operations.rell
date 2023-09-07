@@ -6,11 +6,11 @@ namespace IShop {
         HeroShop.refresh(player);
     }
     
-    operation buy_hero(hero_id: byte_array) {
+    operation buy_hero(hero_id: byte_array, name) {
         val account = ft4.auth.authenticate();
         val player = Player.get_by_account(account);
         
-        HeroShop.buy(player, hero_id);
+        HeroShop.buy(player, hero_id, name);
     }
     
     operation buy_consumable(Consumable.e_type) {

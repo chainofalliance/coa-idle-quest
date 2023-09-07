@@ -21,7 +21,14 @@ namespace IExpedition {
         Expedition.use_consumbale(challenge, consumable);
     }
 
-    // TODO drop consumable/loot
+    operation drop_consumable(challenge_id: byte_array, consumable: Consumable.e_type) {
+        val account = ft4.auth.authenticate();
+        val player = Player.get_by_account(account);
+
+        var challenge = Challenge.get(challenge_id);
+        require(challenge.expedition.player == player);
+        Expedition.drop_consumbale(challenge, consumable);
+    }
 
     operation advance(challenge_id: byte_array, action: Challenge.e_action) {
         val account = ft4.auth.authenticate();

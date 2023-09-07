@@ -54,6 +54,10 @@ namespace PlayerHero {
     function get_heroes(player: Player.__def) {
         return __def @* {player}.hero;
     }
+
+    function get_highest_rarity(player: Player.__def) {
+        return __def @ {player} (@omit @sort_desc .hero.e_rarity.value, .hero.e_rarity) limit 1;
+    }
 }
 
 namespace PlayerInventory {

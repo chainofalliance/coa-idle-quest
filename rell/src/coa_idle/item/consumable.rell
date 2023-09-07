@@ -3,6 +3,9 @@ namespace Consumable {
         health_potion_s,
         health_potion_m,
         health_potion_l,
+        single_health_potion_s,
+        single_health_potion_m,
+        single_health_potion_l,
         strength_potion_s,
         strength_potion_m,
         strength_potion_l,
@@ -12,6 +15,9 @@ namespace Consumable {
     function use(consumable: e_type, challenge: Challenge.__def) {
         val effect = EFFECT_MAPPING()[consumable];
         if (consumable.name.starts_with("health_potion")) {
+            update ExpeditionParty.__def @* {challenge.expedition} (.health = min(.health + effect, .hero.health));
+        } else if (consumable.name.starts_with("single_health_potion")) {
+            // TODO heal the one with lowest health
             update ExpeditionParty.__def @* {challenge.expedition} (.health = min(.health + effect, .hero.health));
         } else {
             create Challenge.effect (challenge, consumable); 

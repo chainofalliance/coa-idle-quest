@@ -91,6 +91,11 @@ namespace Expedition {
         ExpeditionConsumables.use(challenge, consumable);
     }
 
+    function drop_consumbale(challenge: Challenge.__def, consumable: Consumable.e_type) {
+        require(Challenge.cancel @? {challenge.expedition} == null);
+        ExpeditionConsumables.drop(challenge, consumable);
+    }
+
     function finish(expedition: Expedition.__def, timestamp = now()) {
         require(not expedition.returned);
         var retreat = Challenge.cancel @ {expedition};
@@ -98,7 +103,7 @@ namespace Expedition {
 
         expedition.returned = true;
         ChallengeLoot.claim(expedition);
-        // TODO delete or return consumables?
+        ExpeditionConsumables.after_expedition(expedition);
     }
 }
 
@@ -131,13 +136,24 @@ namespace ExpeditionParty {
             max_health = .hero.health
         );
     }
+    
+    function is_wiped(expedition: Expedition.__def) {
+        var party = ExpeditionParty.get(expedition);
+
+        var is_dead = false;
+        for (member in party)
+            is_dead = is_dead or member.health > 0;
+
+        return is_dead;
+    }
 }
 
 namespace ExpeditionConsumables {
     enum e_state {
         usable,
         used,
-        lost
+        lost,
+        returned
     }
 
     entity __def {
@@ -150,17 +166,26 @@ namespace ExpeditionConsumables {
         create __def (expedition, type);
     }
 
-    function add_random(expedition: Expedition.__def) {
-        construct(expedition, Consumable.e_type.value(Random.next_integer(Consumable.e_type.max.value)));
-    }
-
     function use(challenge: Challenge.__def, consumable: Consumable.e_type) {
         val e = __def @ {challenge.expedition, consumable, e_state.usable} limit 1;
         Consumable.use(consumable, challenge);
         e.state = e_state.used;
+    }    
+
+    function drop(challenge: Challenge.__def, consumable: Consumable.e_type) {
+        val e = __def @ {challenge.expedition, consumable, e_state.usable} limit 1;
+        e.state = e_state.lost;
     }
 
     function on_wipe(expedition: Expedition.__def) {
         update __def @ {expedition, e_state.usable} (.state = e_state.lost);
+    }
+
+    function after_expedition(expedition: Expedition.__def) {
+        val all = __def @* {expedition, e_state.usable};
+        for (i in all) {
+            PlayerInventory.give(expedition.player, i.type.name, 1);
+            i.state = e_state.returned;
+        }
     }
 }

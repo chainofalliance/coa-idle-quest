@@ -26,13 +26,14 @@ namespace Hero {
 
     entity __def {
         id: byte_array;
+        name;
         e_rarity;
         e_class;
         e_species;
         health: integer;
     }
 
-    function construct(player: Player.__def, hero_struct: struct<__def>) {
+    function construct(player: Player.__def, hero_struct: struct<mutable __def>) {
         var hero = create Hero.__def (hero_struct);
         create PlayerHero.__def (hero, player);
         return hero;
@@ -57,18 +58,18 @@ namespace Hero {
         return (base[classs] * (1 + (rarity.value / 4.0))).to_integer();
     }
     
-    function get_random(increase: integer = 0) {
-        return get_with_rarity(get_random_rarity(increase), increase);
+    function get_random() {
+        return get_with_rarity(get_random_rarity());
     }
     
-    function get_random_rarity(increase: integer = 0) {
+    function get_random_rarity(max_rarity: e_rarity = e_rarity.legendary) {
         val chances = RARITY_CHANCE();
-        val aggregate = chances @ {} (@sum $[1]) + (increase * chances.size());
+        val aggregate = chances @ {$[0].value <= max_rarity.value} (@sum $[1]);
         var rnd = Random.next_integer(aggregate) + 1;
 
         var idx = 0;
         while (true) {
-            rnd -= chances[Hero.e_rarity.value(idx)] + increase;
+            rnd -= chances[Hero.e_rarity.value(idx)];
             if (rnd <= 0)
                 break;
             else
@@ -92,6 +93,7 @@ namespace Hero {
         var classs = get_random_class();
         return struct<__def>(
             id = Random.next(),
+            "",
             rarity,
             classs,
             get_random_species(),
@@ -100,10 +102,10 @@ namespace Hero {
     }
 
     function RARITY_CHANCE() = map<Hero.e_rarity, integer>([
-        Hero.e_rarity.common: 100,
-        Hero.e_rarity.uncommon: 75,
-        Hero.e_rarity.rare: 50,
-        Hero.e_rarity.magical: 25,
-        Hero.e_rarity.legendary: 0
+        Hero.e_rarity.common: 10,
+        Hero.e_rarity.uncommon: 25,
+        Hero.e_rarity.rare: 35,
+        Hero.e_rarity.magical: 75,
+        Hero.e_rarity.legendary: 100
     ]);
 }
