@@ -7,10 +7,10 @@ namespace IShop {
     }
 
     query get_consumables() {
-        return ConsumableShop.PRICE_MAP();
+        return ConsumableShop.PRICE_MAP() @* {} (consumable = $[0], price = $[1]);
     }
     
     query get_backpacks() {
-        return BackpackShop.PRICE_MAP();
+        return BackpackShop.PRICE_MAP() @* {} (backpack = $[0], price = $[1]);
     }
 }
