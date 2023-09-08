@@ -67,6 +67,7 @@ namespace Challenge {
     entity effect {
         challenge: __def;
         consumable: Consumable.e_type;
+        key challenge, consumable;
     }
 
     entity outcome {
@@ -117,7 +118,8 @@ namespace Challenge {
             class_advantage = challenge.class_advantage,
             states = get_states_definition(challenge),
             outcome = get_outcome_definition(challenge),
-            loot = ChallengeLoot.get_definition(challenge)
+            loot = ChallengeLoot.get_definition(challenge),
+            effects = get_effects_definition(challenge)
         );
     }
 
@@ -132,7 +134,8 @@ namespace Challenge {
             class_advantage = .class_advantage,
             states = get_states_definition(c),
             outcome = get_outcome_definition(c),
-            loot = ChallengeLoot.get_definition(c)
+            loot = ChallengeLoot.get_definition(c),
+            effects = get_effects_definition(c)
         );
     }
 
@@ -150,6 +153,12 @@ namespace Challenge {
             needed = .needed,
             roll = .roll,
             success = .success
+        );
+    }
+
+    function get_effects_definition(challenge: __def) {
+        return effect @* {challenge} (
+            consumable = .consumable
         );
     }
 
@@ -203,10 +212,11 @@ namespace Challenge {
             class_chance = BONUS_MATCH_CLASS; 
 
         val effects = effect @* {challenge};
+        var damage_reduction_mod = 0.0;
         for (effect in effects) {
             val e = Consumable.EFFECT_MAPPING()[effect.consumable];
             if (effect.consumable.name.starts_with("protect")) {
-                chance += e;
+                damage_reduction_mod += e / 100.0;
             } else if (effect.consumable == Consumable.e_type.changeling) {
                 class_chance = e;
             } else if (effect.consumable == Consumable.e_type.hustle) {
@@ -224,6 +234,7 @@ namespace Challenge {
             var damage = DAMAGE_MAP()[challenge.e_difficulty][challenge.expedition.e_danger_level];
             val success = rnd > hero_chance;
             damage = if (success) damage else (damage * 0.2).to_integer();
+            damage -= (damage * damage_reduction_mod).to_integer();
 
             if (member.health > 0) {
                 member.health = max(0, member.health - damage);

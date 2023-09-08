@@ -22,13 +22,13 @@ namespace IExpedition {
         scope = "IExpedition.use_consumable",
         flags = ["A"]
     );
-    operation use_consumable(challenge_id: byte_array, consumable: Consumable.e_type) {
+    operation use_consumable(expedition_id: byte_array, consumable: Consumable.e_type) {
         val account = ft4.auth.authenticate();
         val player = Player.get_by_account(account);
 
-        var challenge = Challenge.get(challenge_id);
-        require(challenge.expedition.player == player);
-        Expedition.use_consumbale(challenge, consumable);
+        var expedition = Expedition.get(expedition_id);
+        require(expedition.player == player);
+        Expedition.use_consumbale(expedition, consumable);
     }
 
     @extend(ft4.auth.auth_handler)
