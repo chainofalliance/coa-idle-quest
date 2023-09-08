@@ -3,7 +3,7 @@ namespace Player {
 
     entity __def {
         key account: ft4.acc.account;
-        mutable shards: integer = 75;
+        mutable shards: integer = 300;
     }
 
     function construct(account: ft4.acc.account): __def {

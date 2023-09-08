@@ -8,8 +8,8 @@ namespace Consumable {
         protect_s,
         protect_l,
         evade_encounter,
-        changeling, // TODO what do?
-        hustle, // TODO what do?
+        changeling,
+        hustle,
         max,
     }
 

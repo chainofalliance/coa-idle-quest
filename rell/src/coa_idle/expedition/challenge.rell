@@ -198,16 +198,23 @@ namespace Challenge {
         var party = ExpeditionParty.get(challenge.expedition);
 
         var chance = if (chance_in??) chance_in else CHALLENGE_SUCCESS_CHANCE()[challenge.e_difficulty];
+        var class_chance = 0;
         if (party @ {.hero.classs == challenge.class_advantage, .health > 0} (@sum 1) > 0)
-            chance += BONUS_MATCH_CLASS; 
+            class_chance = BONUS_MATCH_CLASS; 
 
         val effects = effect @* {challenge};
         for (effect in effects) {
             val e = Consumable.EFFECT_MAPPING()[effect.consumable];
             if (effect.consumable.name.starts_with("protect")) {
                 chance += e;
+            } else if (effect.consumable == Consumable.e_type.changeling) {
+                class_chance = e;
+            } else if (effect.consumable == Consumable.e_type.hustle) {
+                chance += e;
             }
         }
+
+        chance += class_chance;
 
         val species_favor = SPECIES_FAVOR()[challenge.e_terrain];
         val alive_members = party @* {.health > 0};
@@ -246,6 +253,8 @@ namespace Challenge {
         for (effect in effects) {
             val e = Consumable.EFFECT_MAPPING()[effect.consumable];
             if (effect.consumable == Consumable.e_type.evade_encounter) {
+                chance += e;
+            } else if (effect.consumable == Consumable.e_type.hustle) {
                 chance += e;
             }
         }
