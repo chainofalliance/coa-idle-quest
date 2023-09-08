@@ -50,3 +50,33 @@ function test_expedition() {
     assert_equals(IPlayer.get_consumables(alice.account_id).size(), 0);
     assert_gt(IPlayer.get_shards(alice.account_id), 300);
 }
+
+
+function test_expedition_run_through() {
+    val alice = player_alice();
+
+    val heroes_first = IShop.get_hero_selection(alice.account_id);
+    tx(IShop.buy_hero(heroes_first[0].hero.id, "1"), alice.keypair).run();
+    tx(IShop.buy_hero(heroes_first[1].hero.id, "2"), alice.keypair).run();
+    tx(IShop.buy_hero(heroes_first[2].hero.id, "3"), alice.keypair).run();
+
+    val heroes = IPlayer.get_heroes(alice.account_id);
+    tx(IExpedition.start(heroes @* {} (.id), [], Expedition.e_danger_level.neglible, Backpack.name(Hero.e_rarity.common)), alice.keypair).run();
+
+    val expeditions = IExpedition.get_active(alice.account_id);
+    var expedition_id = expeditions[0].id;
+
+    var details = IExpedition.get_details(expedition_id);
+    while (true) {
+        tx(IExpedition.select_challenge(details.challenges[0].id), alice.keypair).run();
+        tx(IDev.advance_now(details.challenges[0].id, Challenge.e_action.resolve), alice.keypair).run();
+        
+        details = IExpedition.get_details(expedition_id);
+        if (details.party @ {} (@sum .health) == 0)
+            break;
+    }
+
+    tx(IDev.finish_now(expedition_id), alice.keypair).run();
+    val t = IExpedition.get_details(expedition_id);
+    print(t.to_gtv_pretty().to_json());
+}

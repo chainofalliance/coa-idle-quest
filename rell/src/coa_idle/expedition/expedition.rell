@@ -195,7 +195,7 @@ namespace ExpeditionConsumables {
     }
 
     function on_wipe(expedition: Expedition.__def) {
-        update __def @ {expedition, e_state.usable} (.state = e_state.lost);
+        update __def @* {expedition, e_state.usable} (.state = e_state.lost);
     }
 
     function after_expedition(expedition: Expedition.__def) {

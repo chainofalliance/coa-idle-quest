@@ -296,7 +296,7 @@ namespace Challenge {
                 new_level,
                 random_type(),
                 terrain,
-                DIFFICULTY_MAP()[new_level],
+                DIFFICULTY_MAP()[new_level-1],
                 Hero.get_random_class(),
                 expedition
             );
