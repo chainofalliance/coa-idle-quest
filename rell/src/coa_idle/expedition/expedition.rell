@@ -88,13 +88,15 @@ namespace Expedition {
         expedition.e_danger_level = e_danger_level.value(min(expedition.e_danger_level.value + 1, e_danger_level.seriously.value));
     }
 
-    function use_consumbale(challenge: Challenge.__def, consumable: Consumable.e_type) {
-        require(Challenge.cancel @? {challenge.expedition} == null);
+    function use_consumbale(expedition: Expedition.__def, consumable: Consumable.e_type) {
+        val challenge = Challenge.get_active(expedition);
+        require(challenge);
         ExpeditionConsumables.use(challenge, consumable);
     }
 
     function drop_consumbale(expedition: Expedition.__def, consumable: Consumable.e_type) {
-        require(Challenge.cancel @? {expedition} == null);
+        val challenge = Challenge.get_active(expedition);
+        require(challenge);
         ExpeditionConsumables.drop(expedition, consumable);
     }
 
