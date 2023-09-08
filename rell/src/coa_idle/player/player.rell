@@ -56,9 +56,11 @@ namespace PlayerHero {
 
 namespace PlayerInventory {
     entity __def {
-        key player: Player.__def;
+        player: Player.__def;
         item: name;
         mutable amount: integer;
+
+        key player, item;
     }
 
     function ensure(player: Player.__def, item: name) {

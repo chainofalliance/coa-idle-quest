@@ -1,0 +1,29 @@
+namespace IDev {
+    @extend(ft4.auth.auth_handler)
+    function () = ft4.auth.add_auth_handler(
+        scope = "IDev.advance_now",
+        flags = ["A"]
+    );
+    operation advance_now(challenge_id: byte_array, action: Challenge.e_action) {
+        val account = ft4.auth.authenticate();
+        val player = Player.get_by_account(account);
+
+        var challenge = Challenge.get(challenge_id);
+        require(challenge.expedition.player == player);
+        Challenge.select_action(challenge, action, now() + TRAVEL_TIME);
+    }
+
+    @extend(ft4.auth.auth_handler)
+    function () = ft4.auth.add_auth_handler(
+        scope = "IDev.finish_now",
+        flags = ["A"]
+    );
+    operation finish_now(expedition_id: byte_array) {
+        val account = ft4.auth.authenticate();
+        val player = Player.get_by_account(account);
+
+        var expedition = Expedition.get(expedition_id);
+        require(expedition.player == player);
+        Expedition.finish(expedition, now() + TRAVEL_TIME);
+    }
+}

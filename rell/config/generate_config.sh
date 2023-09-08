@@ -20,7 +20,7 @@ CONF_FILE=${ROOTDIR}/config.yml
 envsubst < ${CONFDIR}/template/config_base_template.yml > ${CONF_FILE}
 
 if [ -z ${TEST_MODULES} ]; then
-    for d in ${ROOTDIR}/src/boilerplate/tests/*/ ; do
+    for d in ${ROOTDIR}/src/coa_idle/tests/*/ ; do
         MODULE=$(basename $d)
         if [[ "$MODULE" == *"tests"* ]]; then
             TEST_MODULES+=($MODULE)
@@ -37,7 +37,7 @@ if (( ${#TEST_MODULES[@]} )); then
 fi
 
 for module in "${TEST_MODULES[@]}"; do
-    printf "    - boilerplate.tests.${module}\n" >> ${CONF_FILE}
+    printf "    - coa_idle.tests.${module}\n" >> ${CONF_FILE}
 done
 
 if [ ! -z ${CONTAINER_ID_TESTNET} ]; then

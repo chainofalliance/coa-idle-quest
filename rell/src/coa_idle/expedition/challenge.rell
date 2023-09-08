@@ -71,12 +71,14 @@ namespace Challenge {
     }
 
     entity outcome {
-        key challenge: __def;
+        challenge: __def;
         hero_id: byte_array;
         damage: integer;
         needed: integer;
         roll: integer;
         success: boolean;
+
+        key hero_id, challenge;
     }
 
     entity cancel {
@@ -89,12 +91,12 @@ namespace Challenge {
     }
 
     function get_active(expedition: Expedition.__def) {
-        val challenge = state @ {
+        val challenge = state @? {
             .challenge.expedition == expedition, 
             .state == e_state.traveling
         } (@omit @sort_desc .challenge.level, .challenge) limit 1;
         
-        return if (get_latest_state(challenge) == e_state.traveling) challenge else null;
+        return if (challenge?? and get_latest_state(challenge) == e_state.traveling) challenge else null;
     }
 
     function get_overview(challenge: __def) {
@@ -124,19 +126,22 @@ namespace Challenge {
     }
 
     function get_all(expedition: Expedition.__def) {
-        return (c: __def) @ {expedition} (
+        return __def @* {expedition} (
             @omit @sort_desc .rowid,
-            id = .id,
-            level = .level,
-            type = .e_type,
-            difficulty = .e_difficulty,
-            terrain = .e_terrain,
-            class_advantage = .class_advantage,
-            states = get_states_definition(c),
-            outcome = get_outcome_definition(c),
-            loot = ChallengeLoot.get_definition(c),
-            effects = get_effects_definition(c)
+            get_definition($)
         );
+    }
+
+    function get_selectables(expedition: Expedition.__def) {
+        val ret = state @* {
+            .challenge.expedition == expedition, 
+            .state == e_state.selectable
+        } (@omit @sort_desc .challenge.level, get_definition(.challenge)) limit 2;
+
+        if (ret[0].level != ret[1].level)
+            ret.remove(ret[1]);
+
+        return ret;
     }
 
     function get_states_definition(challenge: __def) {
@@ -171,7 +176,7 @@ namespace Challenge {
     }
 
     function get_retreat(expedition: Expedition.__def) {
-        return cancel @ {expedition}.timestamp;
+        return cancel @? {expedition}.timestamp;
     }
 
     function select_challenge(challenge: __def) {
@@ -197,7 +202,7 @@ namespace Challenge {
             set_perished(challenge);            
             ChallengeLoot.on_wipe(challenge);
             ExpeditionConsumables.on_wipe(challenge.expedition);
-            create cancel (challenge.expedition, now());
+            create cancel (challenge.expedition, now() + TRAVEL_TIME);
         }
     }
 
@@ -232,8 +237,8 @@ namespace Challenge {
             var rnd = Random.next_integer(100) + 1;
             val hero_chance = if (member.hero.species == species_favor) chance + BONUS_MATCH_SPECIES else chance;
             var damage = DAMAGE_MAP()[challenge.e_difficulty][challenge.expedition.e_danger_level];
-            val success = rnd > hero_chance;
-            damage = if (success) damage else (damage * 0.2).to_integer();
+            val success = rnd <= hero_chance;
+            damage = if (success) (damage * 0.2).to_integer() else damage;
             damage -= (damage * damage_reduction_mod).to_integer();
 
             if (member.health > 0) {
@@ -308,7 +313,7 @@ namespace Challenge {
         for (challenge in latest_challenges)
             set_retreated(challenge);
 
-        create cancel (expedition, now());
+        create cancel (expedition, now() + TRAVEL_TIME);
     }
 
     // +++++++++++++++++

@@ -48,22 +48,21 @@ namespace Expedition {
     }
 
     function get_all(player: Player.__def) {
-        return __def @* {player} (
-            id = .id,
-            danger_level = .e_danger_level,
-            created_at = .created_at,
-            party = ExpeditionParty.get_overview($),
-            active_challenge = get_overview($)
-        );
+        return __def @* {player} (_wrap($));
     }
 
     function get_all_ongoing(player: Player.__def) {
-        return __def @* {player, .returned == false} (
-            id = .id,
-            danger_level = .e_danger_level,
-            created_at = .created_at,
-            party = ExpeditionParty.get_overview($),
-            active_challenge = get_overview($)
+        return __def @* {player, .returned == false} (_wrap($));
+    }
+
+    function _wrap(expedition: __def) {
+        return (
+            id = expedition.id,
+            danger_level = expedition.e_danger_level,
+            created_at = expedition.created_at,
+            party = ExpeditionParty.get_overview(expedition),
+            active_challenge = get_overview(expedition),
+            next = Challenge.get_selectables(expedition)
         );
     }
 
@@ -80,6 +79,7 @@ namespace Expedition {
         return (
             party = ExpeditionParty.get_overview(expedition),
             challenges = Challenge.get_all(expedition),
+            consumables = ExpeditionConsumables.get_overview(expedition),
             arrival_at = if (challenge??) Challenge.get_arrival(challenge) else Challenge.get_retreat(expedition)
         );
     }
@@ -150,11 +150,11 @@ namespace ExpeditionParty {
     function is_wiped(expedition: Expedition.__def) {
         var party = ExpeditionParty.get(expedition);
 
-        var is_dead = false;
+        var is_alive = false;
         for (member in party)
-            is_dead = is_dead or member.health > 0;
+            is_alive = is_alive or member.health > 0;
 
-        return is_dead;
+        return not is_alive;
     }
 }
 
@@ -174,6 +174,13 @@ namespace ExpeditionConsumables {
 
     function construct(expedition: Expedition.__def, type: Consumable.e_type) {
         create __def (expedition, type);
+    }
+
+    function get_overview(expedition: Expedition.__def) {
+        return __def @* {expedition} (
+            consumable = .type,
+            state = .state
+        );
     }
 
     function use(challenge: Challenge.__def, consumable: Consumable.e_type) {

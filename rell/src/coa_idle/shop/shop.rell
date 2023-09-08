@@ -32,7 +32,8 @@ namespace HeroShop {
         Hero.construct(player, hero);
         val is_starting = PlayerHero.get_heroes(player).size() < 3;
         if (was_starting and not is_starting) {
-            refresh(player);
+            delete __def @* {player};
+            _refresh(player, SELECTION_PER_PLAYER, true);
         } else {
             delete __def @ {.hero_id == id, player};
             _refresh(player, 1, true);

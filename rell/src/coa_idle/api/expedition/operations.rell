@@ -19,6 +19,20 @@ namespace IExpedition {
 
     @extend(ft4.auth.auth_handler)
     function () = ft4.auth.add_auth_handler(
+        scope = "IExpedition.select_challenge",
+        flags = ["A"]
+    );
+    operation select_challenge(challenge_id: byte_array) {
+        val account = ft4.auth.authenticate();
+        val player = Player.get_by_account(account);
+
+        var challenge = Challenge.get(challenge_id);
+        require(challenge.expedition.player == player);
+        Challenge.select_challenge(challenge);
+    }
+
+    @extend(ft4.auth.auth_handler)
+    function () = ft4.auth.add_auth_handler(
         scope = "IExpedition.use_consumable",
         flags = ["A"]
     );

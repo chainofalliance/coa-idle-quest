@@ -1,0 +1,23 @@
+function player_alice() = create_test_player(alice_keypair());
+function player_bob() = create_test_player(bob_keypair());
+function player_eve() = create_test_player(eve_keypair());
+
+function create_test_player(rell.test.keypair) {
+    val auth_descriptor = create_auth_descriptor(keypair.pub);
+
+    IPlayer.register(auth_descriptor).sign(keypair).run();
+
+    val player = Player.get_by_account_id(auth_descriptor.hash());
+
+    return (
+        player = player,
+        account_id = player.account.id,
+        keypair = keypair
+    );
+}
+
+function tx(op: rell.test.op, kp: rell.test.keypair) {
+    val auth_descriptor = create_auth_descriptor(kp.pub);
+    val auth_id = auth_descriptor.hash();
+    return rell.test.tx().nop().op(ft4.auth.ft_auth(auth_id, auth_id)).op(op).sign(kp);
+}

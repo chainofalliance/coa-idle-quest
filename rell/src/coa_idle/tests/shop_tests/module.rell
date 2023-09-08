@@ -1,0 +1,109 @@
+@test module;
+import ^.helper.*;
+
+function test_onboarding() {
+    val alice = player_alice();
+
+    val heroes_first = IShop.get_hero_selection(alice.account_id);
+    assert_equals(heroes_first.size(), HeroShop.SELECTION_PER_PLAYER);
+    for (h in heroes_first)
+        assert_equals(h.price, 0);
+
+    tx(IShop.buy_hero(heroes_first[0].hero.id, "1"), alice.keypair).run();
+
+    val heroes_second = IShop.get_hero_selection(alice.account_id);
+    assert_equals(IPlayer.get_heroes(alice.account_id).size(), 1);
+    assert_equals(heroes_second @ {heroes_first.contains($)} (@sum 1), 2);
+    assert_equals(heroes_second.size(), HeroShop.SELECTION_PER_PLAYER);
+    for (h in heroes_second)
+        assert_equals(h.price, 0);
+
+    tx(IShop.buy_hero(heroes_first[0].hero.id, "1"), alice.keypair).run_must_fail();
+    tx(IShop.buy_hero(heroes_second[0].hero.id, "1"), alice.keypair).run();
+
+    val heroes_third = IShop.get_hero_selection(alice.account_id);
+    assert_equals(IPlayer.get_heroes(alice.account_id).size(), 2);
+    assert_equals(heroes_third.size(), HeroShop.SELECTION_PER_PLAYER);
+    assert_equals(heroes_third @ {heroes_first.contains($)} (@sum 1), 1);
+    assert_equals(heroes_third @ {heroes_second.contains($)} (@sum 1), 2);
+    for (h in heroes_third)
+        assert_equals(h.price, 0);
+
+        
+    tx(IShop.buy_hero(heroes_second[0].hero.id, "1"), alice.keypair).run_must_fail();
+    tx(IShop.buy_hero(heroes_third[0].hero.id, "1"), alice.keypair).run();
+
+    val heroes_fourth = IShop.get_hero_selection(alice.account_id);
+    assert_equals(IPlayer.get_heroes(alice.account_id).size(), 3);
+    assert_equals(heroes_fourth.size(), HeroShop.SELECTION_PER_PLAYER);
+    assert_equals(heroes_fourth @ {heroes_first.contains($)} (@sum 1), 0);
+    for (h in heroes_fourth)
+        assert_not_equals(h.price, 0);
+        
+    assert_equals(IPlayer.get_shards(alice.account_id), 300);
+}
+
+function test_refresh() {
+    val alice = player_alice();
+
+    val heroes_first = IShop.get_hero_selection(alice.account_id);
+    tx(IShop.refresh(), alice.keypair).run();
+    val heroes_second = IShop.get_hero_selection(alice.account_id);
+    assert_equals(heroes_second @ {heroes_first.contains($)} (@sum 1), 0);
+}
+
+function test_buy_consumable() {
+    val alice = player_alice();
+
+    val cost = IShop.get_consumables();
+    assert_equals(cost.size(), Consumable.e_type.max.value - 2);
+
+    assert_equals(IPlayer.get_shards(alice.account_id), 300);
+    assert_equals(IPlayer.get_consumables(alice.account_id).size(), 0);
+    tx(IShop.buy_consumable(Consumable.e_type.heal_single_small), alice.keypair).run();
+    tx(IShop.buy_consumable(Consumable.e_type.changeling), alice.keypair).run_must_fail();
+    val c1 = IPlayer.get_consumables(alice.account_id);
+    assert_equals(c1.size(), 1);
+    assert_equals(c1[0][0], Consumable.e_type.heal_single_small);
+    assert_equals(c1[0][1], 1);
+    assert_equals(IPlayer.get_shards(alice.account_id), 300 - cost[Consumable.e_type.heal_single_small]);
+
+    tx(IShop.buy_consumable(Consumable.e_type.heal_single_small), alice.keypair).run();
+    val c2 = IPlayer.get_consumables(alice.account_id);
+    assert_equals(c2.size(), 1);
+    assert_equals(c2[0][0], Consumable.e_type.heal_single_small);
+    assert_equals(c2[0][1], 2);
+    
+    tx(IShop.buy_consumable(Consumable.e_type.protect_l), alice.keypair).run();
+    val c3 = IPlayer.get_consumables(alice.account_id);
+    assert_equals(c3.size(), 2);
+    assert_equals(c3[1][0], Consumable.e_type.protect_l);
+    assert_equals(c3[1][1], 1);
+
+    tx(IShop.buy_consumable(Consumable.e_type.protect_l), alice.keypair).run_must_fail();
+}
+
+function test_buy_backpack() {
+    val alice = player_alice();
+
+    val cost = IShop.get_backpacks();
+    assert_equals(cost.size(), Hero.e_rarity.legendary.value);
+
+    assert_equals(IPlayer.get_shards(alice.account_id), 300);
+    assert_equals(IPlayer.get_consumables(alice.account_id).size(), 0);
+    tx(IShop.buy_backpack(Backpack.name(Hero.e_rarity.uncommon)), alice.keypair).run();
+    tx(IShop.buy_backpack(Backpack.name(Hero.e_rarity.common)), alice.keypair).run_must_fail();
+    val c1 = IPlayer.get_backpacks(alice.account_id);
+    assert_equals(c1.size(), 1);
+    assert_equals(c1[0][0], Backpack.name(Hero.e_rarity.uncommon));
+    assert_equals(c1[0][1], 1);
+    assert_equals(IPlayer.get_shards(alice.account_id), 300 - cost[Backpack.name(Hero.e_rarity.uncommon)]);
+
+    tx(IShop.buy_backpack(Backpack.name(Hero.e_rarity.uncommon)), alice.keypair).run();
+    val c2 = IPlayer.get_backpacks(alice.account_id);
+    assert_equals(c2.size(), 1);
+    assert_equals(c2[0][0], Backpack.name(Hero.e_rarity.uncommon));
+    assert_equals(c2[0][1], 2);
+    
+    tx(IShop.buy_backpack(Backpack.name(Hero.e_rarity.uncommon)), alice.keypair).run_must_fail();
+}

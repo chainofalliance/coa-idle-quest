@@ -1,0 +1,52 @@
+@test module;
+import ^.helper.*;
+
+function test_expedition() {
+    val alice = player_alice();
+
+    val heroes_first = IShop.get_hero_selection(alice.account_id);
+    tx(IShop.buy_hero(heroes_first[0].hero.id, "1"), alice.keypair).run();
+    tx(IShop.buy_hero(heroes_first[1].hero.id, "2"), alice.keypair).run();
+    tx(IShop.buy_hero(heroes_first[2].hero.id, "3"), alice.keypair).run();
+
+    val heroes = IPlayer.get_heroes(alice.account_id);
+    assert_equals(IExpedition.get_active(alice.account_id).size(), 0);
+    tx(IExpedition.start(heroes @* {} (.id), [], Expedition.e_danger_level.neglible, Backpack.name(Hero.e_rarity.common)), alice.keypair).run();
+
+    val expeditions = IExpedition.get_active(alice.account_id);
+    assert_equals(expeditions.size(), 1);
+    val expedition1 = expeditions[0];
+    assert_equals(expedition1.next.size(), 2);
+
+    tx(IExpedition.select_challenge(expedition1.next[0].id), alice.keypair).run();
+    var expedition = IExpedition.get_details(expedition1.id);
+    assert_equals(expedition.challenges.size(), 2);
+    assert_equals(expedition.challenges[0].states.size(), 2);
+    assert_equals(expedition.challenges[0].states[0].state, Challenge.e_state.ignored);
+    assert_equals(expedition.challenges[1].states[0].state, Challenge.e_state.traveling);
+    
+    tx(IExpedition.advance(expedition1.next[0].id, Challenge.e_action.resolve), alice.keypair).run_must_fail();
+    tx(IDev.advance_now(expedition1.next[0].id, Challenge.e_action.resolve), alice.keypair).run();
+
+    expedition = IExpedition.get_details(expedition1.id);
+    print(expedition.to_gtv_pretty().to_json());
+
+    tx(IExpedition.select_challenge(expedition.challenges[0].id), alice.keypair).run();
+    tx(IExpedition.use_consumable(expedition1.id, Consumable.e_type.heal_party_m), alice.keypair).run();
+
+    
+    tx(IExpedition.retreat(expedition1.id), alice.keypair).run();
+    expedition = IExpedition.get_details(expedition1.id);
+    tx(IExpedition.select_challenge(expedition1.next[0].id), alice.keypair).run_must_fail();
+    print("\n---------------------------------------------\n");
+    print(expedition.to_gtv_pretty().to_json());
+
+    tx(IExpedition.finish(expedition1.id), alice.keypair).run_must_fail();
+    tx(IDev.finish_now(expedition1.id), alice.keypair).run();
+    expedition = IExpedition.get_details(expedition1.id);
+    print("\n---------------------------------------------\n");
+    print(expedition.to_gtv_pretty().to_json());
+
+    assert_equals(IPlayer.get_consumables(alice.account_id).size(), 0);
+    assert_gt(IPlayer.get_shards(alice.account_id), 300);
+}

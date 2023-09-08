@@ -3,9 +3,7 @@ namespace IShop {
         account_id: byte_array
     ) {
         val player = Player.get_by_account_id(account_id);
-        val t =  HeroShop.get(player);
-        print(t);
-        return t;
+        return HeroShop.get(player);
     }
 
     query get_consumables() {
