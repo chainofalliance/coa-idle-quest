@@ -176,7 +176,8 @@ namespace Challenge {
     }
 
     function get_retreat(expedition: Expedition.__def) {
-        return cancel @? {expedition}.timestamp;
+        val t = cancel @? {expedition}.timestamp;
+        return if (t??) t else 0;
     }
 
     function select_challenge(challenge: __def) {

@@ -23,7 +23,7 @@ namespace Expedition {
         e_danger_level,
         backpack_name: name
     ) {
-        val backpack = Backpack.get(backpack_name);
+        val backpack = Backpack.get(if (backpack_name == "") "backpack_common" else backpack_name);
         var owners = heroes @* {} (@group PlayerHero.get_owner($));
         var owner = owners[0];
         require(owners.size() == 1);
