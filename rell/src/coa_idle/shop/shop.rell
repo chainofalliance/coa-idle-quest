@@ -3,11 +3,11 @@ namespace HeroShop {
     val REFRESH_COST = 50;
 
     function PRICE_MAP() = map<Hero.e_rarity, integer>([
-        Hero.e_rarity.common: 100,
-        Hero.e_rarity.uncommon: 150,
-        Hero.e_rarity.rare: 200,
-        Hero.e_rarity.magical: 250,
-        Hero.e_rarity.legendary: 500
+        Hero.e_rarity.common: 300,
+        Hero.e_rarity.uncommon: 900,
+        Hero.e_rarity.rare: 2000,
+        Hero.e_rarity.magical: 4000,
+        Hero.e_rarity.legendary: 8000
     ]);
 
     entity __def {
@@ -81,10 +81,10 @@ namespace ConsumableShop {
 
 namespace BackpackShop {
     function PRICE_MAP() = map<name, integer>([
-        Backpack.name(Hero.e_rarity.uncommon): 150,
-        Backpack.name(Hero.e_rarity.rare): 200,
-        Backpack.name(Hero.e_rarity.magical): 250,
-        Backpack.name(Hero.e_rarity.legendary): 500
+        Backpack.name(Hero.e_rarity.uncommon): 400,
+        Backpack.name(Hero.e_rarity.rare): 800,
+        Backpack.name(Hero.e_rarity.magical): 6100,
+        Backpack.name(Hero.e_rarity.legendary): 3500
     ]);
 
     function buy(player: Player.__def, backpack: name) {
