@@ -55,7 +55,7 @@ namespace Hero {
             classs = hero.classs,
             species = hero.species,
             health = hero.health,
-            deployed = ExpeditionParty.__def @? {hero} != null
+            deployed = (ExpeditionParty.__def @* {hero}).size() != 0
         );
     }
 
