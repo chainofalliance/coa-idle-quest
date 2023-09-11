@@ -7,5 +7,6 @@ namespace IPlayer {
 
         val player = Player.construct(account);
         HeroShop.refresh(player);
+        PlayerInventory.give(player, Backpack.name(Hero.e_rarity.common), 1);
     }
 }
