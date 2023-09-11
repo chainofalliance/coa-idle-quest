@@ -54,7 +54,8 @@ namespace Hero {
             rarity = hero.rarity,
             classs = hero.classs,
             species = hero.species,
-            health = hero.health
+            health = hero.health,
+            deployed = ExpeditionParty.__def @? {hero} != null
         );
     }
 
