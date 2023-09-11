@@ -127,6 +127,7 @@ namespace ExpeditionParty {
 
     function construct(expedition: Expedition.__def, heroes: list<Hero.__def>) {
         for (hero in heroes) {
+            require(not Hero.is_deployed(hero));
             create ExpeditionParty.__def(expedition, hero, hero.health);
         }
     }

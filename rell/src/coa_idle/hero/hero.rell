@@ -55,8 +55,12 @@ namespace Hero {
             classs = hero.classs,
             species = hero.species,
             health = hero.health,
-            deployed = (ExpeditionParty.__def @* {hero}).size() != 0
+            deployed = is_deployed(hero)
         );
+    }
+
+    function is_deployed(hero: __def) {
+        return ExpeditionParty.__def @? {hero} != null;
     }
 
     function get_health(rarity: e_rarity, classs: e_class) {
