@@ -83,7 +83,7 @@ namespace BackpackShop {
     function PRICE_MAP() = map<name, integer>([
         Backpack.name(Hero.e_rarity.uncommon): 400,
         Backpack.name(Hero.e_rarity.rare): 800,
-        Backpack.name(Hero.e_rarity.magical): 6100,
+        Backpack.name(Hero.e_rarity.magical): 1600,
         Backpack.name(Hero.e_rarity.legendary): 3500
     ]);
 

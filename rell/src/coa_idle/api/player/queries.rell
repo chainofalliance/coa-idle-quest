@@ -7,16 +7,16 @@ namespace IPlayer {
     query get_backpacks(account_id: byte_array) {
         val player = Player.get_by_account_id(account_id);
         return PlayerInventory.__def @* {player, .item.starts_with("backpack")} (
-            .item,
-            .amount
+            backpack = .item,
+            amount = .amount
         );
     }
 
     query get_consumables(account_id: byte_array) {
         val player = Player.get_by_account_id(account_id);
         return PlayerInventory.__def @* {player, not .item.starts_with("backpack")} (
-            Consumable.e_type.value(.item),
-            .amount
+            consumable = Consumable.e_type.value(.item),
+            amount = .amount
         );
     }
 
