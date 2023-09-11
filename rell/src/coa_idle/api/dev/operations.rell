@@ -26,4 +26,14 @@ namespace IDev {
         require(expedition.player == player);
         Expedition.finish(expedition, now() + TRAVEL_TIME);
     }
+
+    @extend(ft4.auth.auth_handler)
+    function () = ft4.auth.add_auth_handler(
+        scope = "IDev.add_shards",
+        flags = ["A"]
+    );
+    operation add_shards(account_id: byte_array, amount: integer) {
+        val player = Player.get_by_account_id(account_id);
+        player.shards += amount;
+    }
 }
