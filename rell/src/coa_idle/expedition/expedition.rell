@@ -179,9 +179,8 @@ namespace ExpeditionConsumables {
     }
 
     function get_overview(expedition: Expedition.__def) {
-        return __def @* {expedition} (
-            consumable = .type,
-            state = .state
+        return __def @* {expedition, .state == e_state.usable} (
+            .type
         );
     }
 
