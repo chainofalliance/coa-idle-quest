@@ -490,7 +490,7 @@ namespace ChallengeLoot {
         construct(challenge, "shards", e_type.shards, shards);
 
         val spaces = Backpack.get(challenge.expedition.backpack_name);
-        var consumable_space = ExpeditionConsumables.__def @ {challenge.expedition} (@sum 1);
+        var consumable_space = ExpeditionConsumables.__def @ {challenge.expedition, ExpeditionConsumables.e_state.usable} (@sum 1);
         var loot_space = __def @ {challenge, e_type.artifact} (@sum 1);
 
         drop_consumables(challenge, spaces.consumable, consumable_space);
