@@ -114,6 +114,7 @@ namespace Expedition {
         expedition.returned = true;
         ChallengeLoot.claim(expedition);
         ExpeditionConsumables.after_expedition(expedition);
+        ExpeditionParty.destruct(expedition);
     }
 }
 
@@ -131,6 +132,10 @@ namespace ExpeditionParty {
             require(not Hero.is_deployed(hero));
             create ExpeditionParty.__def(expedition, hero, hero.health);
         }
+    }
+
+    function destruct(expedition: Expedition.__def) {
+        delete ExpeditionParty.__def @* {expedition};
     }
 
     function get(expedition: Expedition.__def) {
