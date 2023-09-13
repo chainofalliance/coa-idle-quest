@@ -163,7 +163,7 @@ namespace Challenge {
 
     function get_effects_definition(challenge: __def) {
         return effect @* {challenge} (
-            consumable = .consumable
+            .consumable
         );
     }
 
